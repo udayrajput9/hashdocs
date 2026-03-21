@@ -8,9 +8,14 @@
         <div class="page-title">Certificate Templates</div>
         <div class="page-sub">Design and manage your certificate templates</div>
     </div>
-    <a href="{% url 'template_create' %}" class="btn btn-gradient">
-        <i class="fas fa-plus"></i> New Template
-    </a>
+    <div style="display: flex; gap: 12px;">
+        <a href="{% url 'template_gallery' %}" class="btn btn-secondary">
+            <i class="fas fa-magic"></i> Browse Gallery
+        </a>
+        <a href="{% url 'template_create' %}" class="btn btn-gradient">
+            <i class="fas fa-plus"></i> Blank Template
+        </a>
+    </div>
 </div>
 
 {% if templates %}
@@ -61,9 +66,14 @@
     <div class="empty-icon"><i class="fas fa-paint-brush"></i></div>
     <div class="empty-title">No templates yet</div>
     <div class="empty-sub">Create your first certificate template using the Canva-style builder</div>
-    <a href="{% url 'template_create' %}" class="btn btn-gradient">
-        <i class="fas fa-plus"></i> Create First Template
-    </a>
+    <div style="display: flex; gap: 12px; justify-content: center;">
+        <a href="{% url 'template_gallery' %}" class="btn btn-secondary">
+            <i class="fas fa-magic"></i> Browse Gallery
+        </a>
+        <a href="{% url 'template_create' %}" class="btn btn-gradient">
+            <i class="fas fa-plus"></i> Blank Template
+        </a>
+    </div>
 </div>
 {% endif %}
 {% endblock %}

@@ -6,10 +6,10 @@
 :root {
   --bg-primary: #060a14;
   --bg-secondary: #0d1321;
-  --bg-card: rgba(255, 255, 255, 0.04);
-  --bg-card-hover: rgba(255, 255, 255, 0.07);
-  --glass: rgba(255, 255, 255, 0.06);
-  --glass-border: rgba(255, 255, 255, 0.1);
+  --bg-card: rgba(255, 255, 255, 0.06);
+  --bg-card-hover: rgba(255, 255, 255, 0.10);
+  --glass: rgba(255, 255, 255, 0.08);
+  --glass-border: rgba(255, 255, 255, 0.14);
   --blue: #4f8ef7;
   --blue-dark: #2563eb;
   --blue-glow: rgba(79, 142, 247, 0.4);
@@ -17,12 +17,12 @@
   --purple-glow: rgba(139, 92, 246, 0.4);
   --gold: #f59e0b;
   --text-primary: #f0f4ff;
-  --text-secondary: #94a3b8;
-  --text-muted: #4a5568;
+  --text-secondary: #b5c4d8;
+  --text-muted: #7a8ba8;
   --success: #10b981;
   --error: #ef4444;
   --warning: #f59e0b;
-  --border: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.11);
   --sidebar-w: 260px;
   --radius: 14px;
   --radius-sm: 8px;
@@ -37,7 +37,8 @@ body {
   background: var(--bg-primary);
   color: var(--text-primary);
   min-height: 100vh;
-  line-height: 1.6;
+  line-height: 1.7;
+  font-size: 15px;
 }
 
 /* ── Scrollbar ── */
@@ -92,7 +93,7 @@ body {
 }
 
 .sidebar-logo .logo-sub {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--text-muted);
   font-weight: 500;
   letter-spacing: 1.5px;
@@ -102,10 +103,10 @@ body {
 .sidebar-nav { flex: 1; padding: 16px 12px; }
 
 .nav-section-label {
-  font-size: 10px;
+  font-size: 11.5px;
   font-weight: 600;
   text-transform: uppercase;
-  letter-spacing: 1.5px;
+  letter-spacing: 1.2px;
   color: var(--text-muted);
   padding: 8px 8px 4px;
   margin-top: 8px;
@@ -119,7 +120,7 @@ body {
   border-radius: var(--radius-sm);
   color: var(--text-secondary);
   text-decoration: none;
-  font-size: 14px;
+  font-size: 14.5px;
   font-weight: 500;
   transition: all 0.2s ease;
   margin: 2px 0;
@@ -150,7 +151,7 @@ body {
 
 .wallet-badge .wallet-label {
   color: var(--text-muted);
-  font-size: 10px;
+  font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 1px;
   margin-bottom: 4px;
@@ -381,7 +382,7 @@ body {
 
 .form-label {
   display: block;
-  font-size: 13px;
+  font-size: 13.5px;
   font-weight: 600;
   color: var(--text-secondary);
   margin-bottom: 6px;
@@ -431,18 +432,19 @@ table.data-table {
 .data-table th {
   text-align: left;
   padding: 12px 16px;
-  font-size: 11px;
+  font-size: 12px;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
   border-bottom: 1px solid var(--border);
   white-space: nowrap;
 }
 
 .data-table td {
   padding: 14px 16px;
-  border-bottom: 1px solid rgba(255,255,255,0.04);
+  border-bottom: 1px solid rgba(255,255,255,0.07);
   color: var(--text-secondary);
+  font-size: 14px;
 }
 
 .data-table tbody tr:hover { background: var(--bg-card-hover); }
@@ -653,7 +655,7 @@ table.data-table {
   color: var(--text-secondary);
   max-width: 580px;
   margin: 0 auto 40px;
-  line-height: 1.7;
+  line-height: 1.8;
   animation: fadeInUp 0.6s ease 0.2s both;
 }
 
@@ -692,7 +694,7 @@ table.data-table {
   margin-bottom: 16px;
 }
 
-.section-sub { color: var(--text-secondary); font-size: 17px; max-width: 540px; }
+.section-sub { color: var(--text-secondary); font-size: 17px; max-width: 540px; line-height: 1.75; }
 
 .features-grid {
   display: grid;
@@ -828,7 +830,7 @@ table.data-table {
 }
 
 .editor-tool span {
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -848,11 +850,11 @@ table.data-table {
 }
 
 .panel-section-title {
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 1px;
-  color: var(--text-muted);
+  letter-spacing: 0.8px;
+  color: var(--text-secondary);
   margin-bottom: 12px;
 }
 
@@ -974,7 +976,7 @@ table.data-table {
 }
 
 .template-name { font-size: 14px; font-weight: 600; }
-.template-meta { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+.template-meta { font-size: 12px; color: var(--text-secondary); margin-top: 2px; }
 
 /* ════════════════════════════════
    VERIFICATION PAGE
@@ -1037,10 +1039,10 @@ table.data-table {
 .detail-row:last-child { border-bottom: none; }
 
 .detail-label {
-  font-size: 12px;
+  font-size: 12.5px;
   text-transform: uppercase;
-  letter-spacing: 0.8px;
-  color: var(--text-muted);
+  letter-spacing: 0.6px;
+  color: var(--text-secondary);
   font-weight: 600;
   flex-shrink: 0;
   width: 140px;
@@ -1083,9 +1085,9 @@ table.data-table {
   height: 100%;
 }
 
-.upload-icon { font-size: 48px; color: var(--blue); margin-bottom: 16px; opacity: 0.7; }
+.upload-icon { font-size: 48px; color: var(--blue); margin-bottom: 16px; opacity: 0.8; }
 .upload-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-.upload-sub { color: var(--text-muted); font-size: 14px; }
+.upload-sub { color: var(--text-secondary); font-size: 14px; }
 
 /* ════════════════════════════════
    PROGRESS BAR
@@ -1159,7 +1161,7 @@ table.data-table {
 }
 
 .page-title { font-size: 26px; font-weight: 800; }
-.page-sub { color: var(--text-secondary); font-size: 14px; margin-top: 2px; }
+.page-sub { color: var(--text-secondary); font-size: 14.5px; margin-top: 4px; }
 
 /* Empty state */
 .empty-state {
@@ -1167,9 +1169,9 @@ table.data-table {
   padding: 60px 32px;
 }
 
-.empty-icon { font-size: 56px; opacity: 0.15; margin-bottom: 16px; }
+.empty-icon { font-size: 56px; opacity: 0.2; margin-bottom: 16px; }
 .empty-title { font-size: 18px; font-weight: 700; margin-bottom: 8px; }
-.empty-sub { color: var(--text-muted); font-size: 14px; margin-bottom: 24px; }
+.empty-sub { color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
 
 /* Hash display */
 .hash-display {

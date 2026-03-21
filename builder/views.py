@@ -25,6 +25,7 @@ from django.core.files.base import ContentFile
 
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 from certificates.models import CertificateTemplate, Certificate
+from .presets import TEMPLATE_PRESETS
 
 
 # ─── Template Management ────────────────────────────────────────────────────
@@ -43,7 +44,13 @@ def template_create(request):
         name='Untitled Certificate',
         canvas_json={
             'version': '5.3.0',
-            'objects': [],
+            'objects': [
+                {"type":"i-text", "text":"Certificate Title", "left":500, "top":150, "originX":"center", "fontSize":48, "fontWeight":"bold", "fill":"#1a1a2e", "fontFamily":"Inter, Arial"},
+                {"type":"i-text", "text":"{{name}}", "left":500, "top":280, "originX":"center", "fontSize":56, "fontWeight":"bold", "fill":"#2563eb", "fontFamily":"Inter, Arial"},
+                {"type":"i-text", "text":"For completing {{course}}", "left":500, "top":400, "originX":"center", "fontSize":24, "fill":"#64748b", "fontFamily":"Inter, Arial"},
+                {"type":"i-text", "text":"{{date}}", "left":300, "top":550, "originX":"center", "fontSize":18, "fill":"#4b5563", "fontFamily":"Inter, Arial"},
+                {"type":"i-text", "text":"{{organization}}", "left":700, "top":550, "originX":"center", "fontSize":18, "fill":"#4b5563", "fontWeight":"bold", "fontFamily":"Inter, Arial"},
+            ],
             'background': '#ffffff'
         }
     )
@@ -66,6 +73,31 @@ def template_delete(request, pk):
         template.delete()
         messages.success(request, 'Template deleted.')
     return redirect('template_list')
+
+
+@login_required
+def template_gallery(request):
+    """Display the 10 pre-designed JSON presets"""
+    return render(request, 'builder/template_gallery.html', {'presets': TEMPLATE_PRESETS})
+
+
+@login_required
+def template_use_preset(request, preset_id):
+    """Create a new template from a preset and redirect to editor"""
+    preset = next((p for p in TEMPLATE_PRESETS if p['id'] == preset_id), None)
+    if not preset:
+        messages.error(request, 'Preset not found.')
+        return redirect('template_gallery')
+        
+    template = CertificateTemplate.objects.create(
+        organization=request.user,
+        name=preset['name'],
+        category=preset['category'],
+        canvas_json=preset['canvas_json'],
+        background_color=preset['canvas_json'].get('background', '#ffffff')
+    )
+    messages.success(request, f'Template "{preset["name"]}" loaded. You can now edit it.')
+    return redirect('template_edit', pk=template.id)
 
 
 @login_required

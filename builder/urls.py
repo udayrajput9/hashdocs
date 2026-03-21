@@ -10,4 +10,6 @@ urlpatterns = [
     path('<uuid:pk>/generate/', views.bulk_generate_page, name='bulk_generate_page'),
     path('<uuid:pk>/bulk/', views.bulk_generate, name='bulk_generate'),
     path('cert/<uuid:cert_pk>/sign/', views.update_tx_hash, name='update_tx_hash'),
+    path('gallery/', views.template_gallery, name='template_gallery'),
+    path('gallery/use/<str:preset_id>/', views.template_use_preset, name='template_use_preset'),
 ]

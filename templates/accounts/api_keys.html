@@ -1,0 +1,200 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}API Keys{% endblock %}
+
+{% block page_content %}
+<div style="display:grid;grid-template-columns:1fr 300px;gap:24px;">
+
+    <!-- Left: API Keys List & Generation -->
+    <div style="display:flex;flex-direction:column;gap:24px;">
+        
+        <!-- Generate Form -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Generate New API Key</span>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'api_keys_generate' %}" style="display:flex;gap:16px;align-items:flex-end;">
+                    {% csrf_token %}
+                    <div class="form-group" style="margin-bottom:0;flex:1;">
+                        <label class="form-label" for="name">Key Name</label>
+                        <input type="text" name="name" id="name" class="form-control" placeholder="e.g. Website Integration, App Verification" required maxlength="100">
+                    </div>
+                    <button type="submit" class="btn btn-gradient">
+                        <i class="fas fa-plus"></i> Generate Key
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Keys Table -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Active API Keys</span>
+            </div>
+            <div class="table-wrap">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>Key Pattern</th>
+                            <th>Total Calls</th>
+                            <th>Last Used</th>
+                            <th>Created</th>
+                            <th style="text-align:right;">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for key in api_keys %}
+                            {% if key.is_active %}
+                            <tr>
+                                <td>{{ key.name }}</td>
+                                <td>
+                                    <div class="hash-display" style="display:inline-flex;align-items:center;gap:8px;" onclick="copyKey('{{ key.key }}', this)">
+                                        <span>{{ key.masked_key }}</span>
+                                        <i class="fas fa-copy" style="color:var(--text-muted);"></i>
+                                    </div>
+                                </td>
+                                <td>{{ key.total_calls }}</td>
+                                <td>{% if key.last_used_at %}{{ key.last_used_at|date:"d M Y, H:i" }}{% else %}<span style="color:var(--text-muted);">Never</span>{% endif %}</td>
+                                <td style="font-size:12px;color:var(--text-muted);">{{ key.created_at|date:"d M Y" }}</td>
+                                <td style="text-align:right;">
+                                    <form method="post" action="{% url 'api_keys_revoke' key.id %}" style="display:inline;" onsubmit="return confirm('Are you sure you want to revoke this key? This action cannot be undone and any integrations using it will immediately break.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="btn btn-danger btn-sm" title="Revoke Key">
+                                            <i class="fas fa-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            {% endif %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="6" style="text-align:center;padding:40px;color:var(--text-muted);">
+                                    <div style="font-size:32px;margin-bottom:12px;opacity:0.3;"><i class="fas fa-key"></i></div>
+                                    No active API keys found. Generate one above to get started.
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        {% if api_keys.count > 0 %}
+        <!-- Revoked Keys -->
+        <div class="card" style="opacity:0.6;">
+            <div class="card-header" style="border-bottom:none;cursor:pointer;" onclick="document.getElementById('revoked-keys').style.display = document.getElementById('revoked-keys').style.display === 'none' ? 'block' : 'none';">
+                <span class="card-title" style="font-size:13px;"><i class="fas fa-history"></i> View Revoked Keys</span>
+            </div>
+            <div id="revoked-keys" style="display:none;">
+                <table class="data-table">
+                    <tbody>
+                        {% for key in api_keys %}
+                            {% if not key.is_active %}
+                            <tr style="opacity:0.7;">
+                                <td><del>{{ key.name }}</del></td>
+                                <td><span style="font-family:monospace;font-size:12px;">{{ key.short_key }}</span></td>
+                                <td>{{ key.total_calls }} calls</td>
+                                <td style="text-align:right;font-size:11px;color:var(--text-muted);">Revoked on {% if key.last_used_at %}{{ key.last_used_at|date:"d M Y" }}{% else %}{{ key.created_at|date:"d M Y" }}{% endif %}</td>
+                            </tr>
+                            {% endif %}
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+
+    </div>
+
+    <!-- Right: Documentation & Snippets -->
+    <div style="display:flex;flex-direction:column;gap:24px;">
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title">Integration Guide</span>
+            </div>
+            <div class="card-body" style="font-size:13px;color:var(--text-secondary);">
+                <p style="margin-bottom:12px;">Use your API key to verify certificates directly from your website or application backend.</p>
+                <div style="margin-bottom:16px;">
+                    <div style="font-weight:600;margin-bottom:6px;color:var(--text-primary);">Endpoint</div>
+                    <div style="background:rgba(0,0,0,0.3);padding:8px 12px;border-radius:6px;font-family:monospace;border:1px solid var(--border);color:var(--blue);">
+                        POST /api/v1/verify/
+                    </div>
+                </div>
+                
+                <div style="font-weight:600;margin-bottom:6px;color:var(--text-primary);">JavaScript (Fetch) Example</div>
+                <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;overflow-x:auto;color:#a5d6ff;line-height:1.5;">
+<span style="color:#ff7b72;">const</span> verifyCertificate = <span style="color:#ff7b72;">async</span> (hash, name) <span style="color:#ff7b72;">=></span> {
+  <span style="color:#ff7b72;">const</span> res = <span style="color:#ff7b72;">await</span> fetch(<span style="color:#a5d6ff;">'{{ request.scheme }}://{{ request.get_host }}/api/v1/verify/'</span>, {
+    method: <span style="color:#a5d6ff;">'POST'</span>,
+    headers: {
+      <span style="color:#a5d6ff;">'Content-Type'</span>: <span style="color:#a5d6ff;">'application/json'</span>,
+      <span style="color:#a5d6ff;">'X-API-Key'</span>: <span style="color:#a5d6ff;">'hd_YOUR_API_KEY'</span>
+    },
+    body: <span style="color:#79c0ff;">JSON</span>.<span style="color:#d2a8ff;">stringify</span>({
+      cert_hash: hash,
+      fields: { name: name }
+    })
+  });
+  <span style="color:#ff7b72;">return</span> <span style="color:#ff7b72;">await</span> res.<span style="color:#d2a8ff;">json</span>();
+};</div>
+                
+                <p style="margin-top:16px;margin-bottom:4px;font-weight:600;color:var(--text-primary);">Expected Response (Valid)</p>
+                <div style="background:#000;border:1px solid var(--border);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;overflow-x:auto;color:#a5d6ff;">
+{
+  "valid": <span style="color:#79c0ff;">true</span>,
+  "certificate_id": "...",
+  "recipient": "Rahul Sharma",
+  "issued_at": "2024-03-21",
+  "organization": "{{ request.user.name }}"
+}</div>
+
+                <p style="margin-top:16px;margin-bottom:4px;font-weight:600;color:var(--error);">Expected Response (Invalid)</p>
+                <div style="background:#000;border:1px solid rgba(239, 68, 68, 0.3);border-radius:8px;padding:12px;font-family:monospace;font-size:11px;overflow-x:auto;color:#a5d6ff;">
+{
+  "valid": <span style="color:#ff7b72;">false</span>,
+  "reason": "Details do not match certificate: name"
+}</div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script>
+function copyKey(keyText, element) {
+    navigator.clipboard.writeText(keyText).then(() => {
+        const icon = element.querySelector('i');
+        icon.className = 'fas fa-check';
+        icon.style.color = 'var(--success)';
+        
+        // Show lightweight toast rather than full toast component
+        const tooltip = document.createElement('div');
+        tooltip.textContent = 'Copied to clipboard';
+        tooltip.style.position = 'fixed';
+        tooltip.style.bottom = '40px';
+        tooltip.style.left = '50%';
+        tooltip.style.transform = 'translateX(-50%)';
+        tooltip.style.background = 'var(--success)';
+        tooltip.style.color = 'white';
+        tooltip.style.padding = '8px 16px';
+        tooltip.style.borderRadius = '20px';
+        tooltip.style.fontSize = '12px';
+        tooltip.style.fontWeight = '600';
+        tooltip.style.zIndex = '9999';
+        tooltip.style.boxShadow = '0 4px 12px rgba(0,0,0,0.3)';
+        document.body.appendChild(tooltip);
+        
+        setTimeout(() => {
+            icon.className = 'fas fa-copy';
+            icon.style.color = 'var(--text-muted)';
+            tooltip.style.opacity = '0';
+            tooltip.style.transition = 'opacity 0.3s';
+            setTimeout(() => tooltip.remove(), 300);
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Acme Corp Hiring Portal</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg: #f8fafc;
+            --surface: #ffffff;
+            --primary: #2563eb;
+            --text: #0f172a;
+            --muted: #64748b;
+            --border: #e2e8f0;
+            --error: #ef4444;
+            --success: #10b981;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 60px auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 32px;
+            font-weight: 800;
+            color: var(--primary);
+            margin-bottom: 8px;
+        }
+
+        .header p {
+            color: var(--muted);
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 32px;
+            box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+            margin-bottom: 32px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 6px;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px 16px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 15px;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37,99,235,0.1);
+        }
+
+        .btn {
+            width: 100%;
+            padding: 14px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+
+        .btn:hover { opacity: 0.9; }
+
+        .flash-messages {
+            margin-bottom: 24px;
+        }
+
+        .flash {
+            padding: 16px;
+            border-radius: 6px;
+            margin-bottom: 12px;
+            font-weight: 500;
+        }
+
+        .flash.success { background: #d1fae5; color: #065f46; border: 1px solid #34d399; }
+        .flash.error { background: #fee2e2; color: #b91c1c; border: 1px solid #f87171; }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 14px;
+        }
+
+        .table th {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 2px solid var(--border);
+            color: var(--muted);
+            font-weight: 600;
+        }
+
+        .table td {
+            padding: 12px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .status {
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+        }
+
+        .api-note {
+            background: #e0f2fe;
+            border: 1px solid #bae6fd;
+            padding: 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            color: #0369a1;
+            margin-bottom: 24px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header">
+        <h1>Acme Corp Careers</h1>
+        <p>Apply for a position. We verify all Blockchain Certificates.</p>
+    </div>
+
+    <div class="api-note">
+        <strong>HashDocs API Integration Active:</strong> 
+        Submitting this form makes a real-time REST API call to HashDocs to verify the certificate hash matches the submitted name and email.
+    </div>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+        {% for category, message in messages %}
+          <div class="flash {{ category }}">{{ message }}</div>
+        {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+        <form method="POST" action="/">
+            <div class="form-group">
+                <label class="form-label" for="name">Legal Name (Must match certificate)</label>
+                <input type="text" id="name" name="name" class="form-control" required placeholder="John Doe">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="email">Email Address</label>
+                <input type="email" id="email" name="email" class="form-control" required placeholder="john@example.com">
+            </div>
+            
+            <div class="form-group">
+                <label class="form-label" for="role">Role Applied For</label>
+                <input type="text" id="role" name="role" class="form-control" required placeholder="Senior Engineer">
+            </div>
+
+            <div class="form-group">
+                <label class="form-label" for="cert_hash">HashDocs Certificate Hash</label>
+                <input type="text" id="cert_hash" name="cert_hash" class="form-control" required placeholder="0xa1b2c3...">
+            </div>
+
+            <button type="submit" class="btn">Submit Application & Verify Cert</button>
+        </form>
+    </div>
+
+    <h2>Recent Candidates</h2>
+    <div class="card" style="padding: 0; overflow: hidden; margin-top: 16px;">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Role</th>
+                    <th>Hash</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cand in candidates %}
+                <tr>
+                    <td>{{ cand.name }}</td>
+                    <td>{{ cand.role }}</td>
+                    <td style="font-family: monospace; color: var(--muted); font-size: 12px;">{{ cand.cert_hash[:10] }}...</td>
+                    <td><span class="status">{{ cand.status }}</span></td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" style="text-align: center; color: var(--muted);">No applications yet.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>

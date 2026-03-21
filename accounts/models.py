@@ -1,6 +1,7 @@
 from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
 from django.db import models
 import uuid
+import secrets
 
 
 class OrganizationManager(BaseUserManager):
@@ -51,3 +52,38 @@ class Organization(AbstractBaseUser, PermissionsMixin):
         return self.templates.aggregate(
             total=models.Sum('certificates__id')
         )
+
+
+def _generate_api_key():
+    """Generate a secure prefixed API key: hd_<40 random hex chars>"""
+    return 'hd_' + secrets.token_hex(20)
+
+
+class APIKey(models.Model):
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    organization = models.ForeignKey(
+        'Organization',
+        on_delete=models.CASCADE,
+        related_name='api_keys'
+    )
+    name = models.CharField(max_length=100, help_text='A label to identify this key')
+    key = models.CharField(max_length=60, unique=True, default=_generate_api_key, editable=False)
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    last_used_at = models.DateTimeField(null=True, blank=True)
+    total_calls = models.PositiveIntegerField(default=0)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"{self.name} ({self.organization.name})"
+
+    @property
+    def masked_key(self):
+        """Show only first 10 chars then asterisks"""
+        return self.key[:10] + '*' * 20
+
+    @property
+    def short_key(self):
+        return self.key[:14] + '...'

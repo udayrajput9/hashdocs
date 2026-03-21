@@ -3,7 +3,8 @@ from django.http import JsonResponse
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from .models import Organization
+from django.shortcuts import get_object_or_404
+from .models import Organization, APIKey
 from .forms import RegisterForm, LoginForm, ProfileForm
 
 
@@ -81,3 +82,37 @@ def update_wallet(request):
         except Exception as e:
             return JsonResponse({'status': 'error', 'message': str(e)}, status=400)
     return JsonResponse({'status': 'error', 'message': 'Invalid request'}, status=400)
+
+
+@login_required
+def api_keys(request):
+    keys = request.user.api_keys.all()
+    return render(request, 'accounts/api_keys.html', {'api_keys': keys})
+
+
+@login_required
+def api_keys_generate(request):
+    if request.method == 'POST':
+        name = request.POST.get('name', '').strip()
+        if not name:
+            messages.error(request, 'API Key name is required.')
+            return redirect('api_keys')
+        
+        # Limit to 10 keys per org
+        if request.user.api_keys.filter(is_active=True).count() >= 10:
+            messages.error(request, 'You can only have up to 10 active API keys.')
+            return redirect('api_keys')
+
+        APIKey.objects.create(organization=request.user, name=name)
+        messages.success(request, f'API Key "{name}" generated successfully.')
+    return redirect('api_keys')
+
+
+@login_required
+def api_keys_revoke(request, pk):
+    if request.method == 'POST':
+        key = get_object_or_404(APIKey, id=pk, organization=request.user)
+        key.is_active = False
+        key.save()
+        messages.info(request, f'API Key "{key.name}" has been revoked.')
+    return redirect('api_keys')
