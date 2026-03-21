@@ -1,0 +1,144 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}Certificate – {{ cert.recipient_name }}{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Certificate Detail</div>
+        <div class="page-sub">Issued to {{ cert.recipient_name }}</div>
+    </div>
+    <div style="display:flex;gap:8px;">
+        <a href="{% url 'certificate_list' %}" class="btn btn-secondary">
+            <i class="fas fa-arrow-left"></i> Back
+        </a>
+        <a href="{% url 'verify_certificate' cert.id %}" target="_blank" class="btn btn-gradient">
+            <i class="fas fa-external-link-alt"></i> Public Verify Page
+        </a>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+    <!-- Certificate Preview -->
+    <div class="card">
+        <div class="card-header"><span class="card-title">Certificate Preview</span></div>
+        <div class="card-body" style="text-align:center;">
+            {% if cert.certificate_image %}
+                <img src="{{ cert.certificate_image.url }}" alt="Certificate"
+                    style="width:100%;border-radius:8px;border:1px solid var(--border);">
+            {% else %}
+                <div style="padding:60px 20px;background:linear-gradient(135deg,#1a1f35,#0d1321);border-radius:8px;color:var(--text-muted);font-size:13px;">
+                    <i class="fas fa-certificate" style="font-size:48px;opacity:0.2;display:block;margin-bottom:12px;"></i>
+                    No preview image
+                </div>
+            {% endif %}
+
+            {% if cert.qr_code %}
+            <div style="margin-top:16px;">
+                <div style="font-size:12px;color:var(--text-muted);margin-bottom:8px;">QR Code (Verification)</div>
+                <img src="{{ cert.qr_code.url }}" alt="QR Code" style="width:120px;height:120px;">
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Meta Details -->
+    <div>
+        <div class="card" style="margin-bottom:16px;">
+            <div class="card-header"><span class="card-title">Certificate Info</span></div>
+            <div class="card-body">
+                <div class="detail-row" style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Recipient</span>
+                    <span style="font-weight:700;">{{ cert.recipient_name }}</span>
+                </div>
+                {% if cert.recipient_email %}
+                <div class="detail-row" style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Email</span>
+                    <span>{{ cert.recipient_email }}</span>
+                </div>
+                {% endif %}
+                <div class="detail-row" style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Status</span>
+                    <span class="badge {% if cert.status == 'issued' %}badge-success{% elif cert.status == 'revoked' %}badge-danger{% else %}badge-warning{% endif %}">
+                        {{ cert.status|title }}
+                    </span>
+                </div>
+                <div class="detail-row" style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Issued</span>
+                    <span>{{ cert.issued_at|date:"d F Y, H:i" }}</span>
+                </div>
+                <div class="detail-row" style="display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Cert ID</span>
+                    <span style="font-family:monospace;font-size:11px;color:var(--text-muted);">{{ cert.id }}</span>
+                </div>
+                <div class="detail-row" style="display:flex;justify-content:space-between;align-items:flex-start;padding:10px 0;">
+                    <span style="font-size:12px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;">Verifications</span>
+                    <span style="color:var(--success);">{{ cert.verification_logs.count }} times</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Blockchain Info -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="fab fa-ethereum" style="color:var(--purple);"></i> Blockchain</span>
+            </div>
+            <div class="card-body">
+                {% if cert.cert_hash %}
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">SHA-256 Hash</div>
+                    <div class="hash-display" onclick="navigator.clipboard.writeText('{{ cert.cert_hash }}');this.textContent='Copied!';" title="Click to copy">{{ cert.cert_hash }}</div>
+                </div>
+                {% endif %}
+
+                {% if cert.tx_hash %}
+                <div style="margin-bottom:16px;">
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">Transaction Hash</div>
+                    <div class="hash-display">{{ cert.tx_hash }}</div>
+                    <a href="https://amoy.polygonscan.com/tx/{{ cert.tx_hash }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-top:8px;">
+                        <i class="fas fa-external-link-alt"></i> View on PolygonScan
+                    </a>
+                </div>
+                {% else %}
+                <div style="padding:16px;background:rgba(245,158,11,0.05);border:1px solid rgba(245,158,11,0.2);border-radius:8px;margin-bottom:16px;">
+                    <div style="color:var(--warning);font-weight:600;font-size:13px;margin-bottom:6px;">
+                        <i class="fas fa-exclamation-triangle"></i> Not yet anchored on blockchain
+                    </div>
+                    <div style="color:var(--text-muted);font-size:12px;">Connect MetaMask from the dashboard sidebar to sign this certificate hash.</div>
+                </div>
+                {% endif %}
+
+                {% if cert.ipfs_cid %}
+                <div>
+                    <div style="font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">IPFS CID</div>
+                    <div class="hash-display">{{ cert.ipfs_cid }}</div>
+                    <a href="https://ipfs.io/ipfs/{{ cert.ipfs_cid }}" target="_blank" class="btn btn-secondary btn-sm" style="margin-top:8px;">
+                        <i class="fas fa-cloud"></i> View on IPFS
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Extra CSV Data -->
+{% if cert.extra_data %}
+<div class="card" style="margin-top:24px;">
+    <div class="card-header"><span class="card-title">Additional Data (from CSV)</span></div>
+    <div class="card-body">
+        <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;">
+            {% for key, val in cert.extra_data.items %}
+            {% if val %}
+            <div style="background:var(--bg-primary);border:1px solid var(--border);border-radius:8px;padding:12px;">
+                <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">{{ key }}</div>
+                <div style="font-size:14px;font-weight:600;">{{ val }}</div>
+            </div>
+            {% endif %}
+            {% endfor %}
+        </div>
+    </div>
+</div>
+{% endif %}
+{% endblock %}

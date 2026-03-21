@@ -1,0 +1,196 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}Bulk Generate – {{ template.name }}{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">
+            <i class="fas fa-bolt" style="color:var(--gold);"></i>
+            Bulk Certificate Generator
+        </div>
+        <div class="page-sub">Upload CSV → Click Generate → Download All Certificates</div>
+    </div>
+    <a href="{% url 'template_edit' template.id %}" class="btn btn-secondary">
+        <i class="fas fa-arrow-left"></i> Back to Editor
+    </a>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+
+    <!-- Upload & Generate -->
+    <div>
+        <div class="card" style="margin-bottom:20px;">
+            <div class="card-header">
+                <span class="card-title">
+                    <i class="fas fa-file-csv" style="color:var(--blue);"></i>
+                    Template: {{ template.name }}
+                </span>
+                <span class="badge badge-purple">{{ template.category|title }}</span>
+            </div>
+            <div class="card-body">
+                <form method="post" action="{% url 'bulk_generate' template.id %}" enctype="multipart/form-data" id="generateForm">
+                    {% csrf_token %}
+                    <div class="upload-zone" id="uploadZone">
+                        <input type="file" name="csv_file" id="csvInput" accept=".csv" required onchange="fileSelected(this)">
+                        <div class="upload-icon"><i class="fas fa-table"></i></div>
+                        <div class="upload-title" id="uploadTitle">Drop CSV File Here</div>
+                        <div class="upload-sub" id="uploadSub">or click to browse — accepts .csv files only</div>
+                    </div>
+
+                    <div style="margin:20px 0;padding:16px;background:rgba(79,142,247,0.05);border:1px solid rgba(79,142,247,0.15);border-radius:var(--radius-sm);">
+                        <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px;">
+                            <i class="fas fa-info-circle"></i> CSV Format
+                        </div>
+                        <div style="font-size:12px;color:var(--text-secondary);line-height:1.8;">
+                            Required column: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">name</code> (or <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">recipient_name</code>)<br>
+                            Optional: <code>email</code>, <code>date</code>, <code>course</code>, <code>grade</code>, <code>score</code><br>
+                            Any extra columns become <code>{{column_name}}</code> placeholders
+                        </div>
+                        <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
+                            Example:
+                            <pre style="background:rgba(0,0,0,0.4);padding:8px;border-radius:4px;margin-top:4px;overflow-x:auto;">name,email,course,date
+Rohit Sharma,rohit@example.com,Python Course,2024-03-01
+Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-gradient" style="width:100%;justify-content:center;padding:14px;" id="generateBtn">
+                        <i class="fas fa-bolt"></i>
+                        Generate All Certificates & Download ZIP
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- MetaMask Signing -->
+        <div class="card">
+            <div class="card-header">
+                <span class="card-title"><i class="fab fa-ethereum" style="color:var(--purple);"></i> Blockchain Anchoring</span>
+                <span class="badge badge-purple">Optional</span>
+            </div>
+            <div class="card-body">
+                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
+                    After generating, you can anchor certificate hashes on the Polygon Amoy testnet (free) using MetaMask. This makes certificates permanently verifiable on-chain.
+                </p>
+                <button class="btn btn-secondary" style="width:100%;justify-content:center;" onclick="signWithMetaMask()">
+                    <i class="fab fa-ethereum"></i> Sign Latest Batch with MetaMask
+                </button>
+                <div id="signing-status" style="margin-top:10px;font-size:12px;color:var(--text-muted);text-align:center;"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recently Generated -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recently Generated</span>
+            <span class="badge badge-blue">{{ recent|length }} records</span>
+        </div>
+        {% if recent %}
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Recipient</th>
+                        <th>Hash</th>
+                        <th>Chain</th>
+                        <th>Verify</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cert in recent %}
+                    <tr>
+                        <td style="font-weight:600;">{{ cert.recipient_name }}</td>
+                        <td>
+                            {% if cert.cert_hash %}
+                            <span class="hash-display" title="{{ cert.cert_hash }}" onclick="navigator.clipboard.writeText('{{ cert.cert_hash }}')">{{ cert.cert_hash|slice:":10" }}...</span>
+                            {% else %}—{% endif %}
+                        </td>
+                        <td>
+                            {% if cert.tx_hash %}
+                            <a href="https://amoy.polygonscan.com/tx/{{ cert.tx_hash }}" target="_blank" class="badge badge-success"><i class="fab fa-ethereum"></i></a>
+                            {% else %}<span class="badge badge-warning">Unsigned</span>{% endif %}
+                        </td>
+                        <td>
+                            <a href="{% url 'verify_certificate' cert.id %}" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i></a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <div class="empty-icon"><i class="fas fa-certificate"></i></div>
+            <div class="empty-title">No certificates yet</div>
+            <div class="empty-sub">Upload a CSV to generate certificates for this template</div>
+        </div>
+        {% endif %}
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+<script>
+function fileSelected(input) {
+    const file = input.files[0];
+    if (file) {
+        document.getElementById('uploadTitle').textContent = file.name;
+        document.getElementById('uploadSub').textContent = `${(file.size/1024).toFixed(1)} KB • Ready to generate`;
+        document.getElementById('uploadZone').style.borderColor = 'var(--success)';
+        document.getElementById('uploadZone').style.background = 'rgba(16,185,129,0.05)';
+    }
+}
+
+// Drag-over styling
+const zone = document.getElementById('uploadZone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
+zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
+zone.addEventListener('drop', () => zone.classList.remove('drag-over'));
+
+// Disable button on submit
+document.getElementById('generateForm').addEventListener('submit', function() {
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating... Please wait';
+});
+
+async function signWithMetaMask() {
+    const status = document.getElementById('signing-status');
+    if (!window.ethereum) {
+        status.textContent = 'MetaMask not installed';
+        return;
+    }
+    try {
+        status.textContent = 'Connecting MetaMask...';
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        const account = accounts[0];
+        const provider = new ethers.BrowserProvider(window.ethereum);
+        const signer = await provider.getSigner();
+
+        // Collect unsigned certs
+        const hashes = Array.from(document.querySelectorAll('[data-cert-hash]')).map(el => ({
+            id: el.dataset.certId,
+            hash: el.dataset.certHash
+        }));
+
+        if (hashes.length === 0) {
+            status.textContent = 'No unsigned certificates found. Generate a batch first.';
+            return;
+        }
+
+        status.textContent = `Signing ${hashes.length} hash(es)...`;
+        // Combine all hashes into one message to sign once
+        const combined = hashes.map(h => h.hash).join('\n');
+        const signature = await signer.signMessage(combined);
+        status.textContent = 'Signed! Signature: ' + signature.slice(0, 30) + '...';
+
+    } catch(err) {
+        status.textContent = 'Error: ' + (err.message || String(err));
+    }
+}
+</script>
+{% endblock %}

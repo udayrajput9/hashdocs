@@ -1,0 +1,45 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Sign In – HashDocs{% endblock %}
+{% block body_class %}auth-body{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <div class="auth-logo-icon">
+                <i class="fas fa-certificate" style="color:white;font-size:22px;"></i>
+            </div>
+            <h1 class="auth-title">Welcome Back</h1>
+            <p class="auth-sub">Sign in to your organization account</p>
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+            <div class="form-group">
+                <label class="form-label">Work Email</label>
+                <input type="email" name="email" class="form-control" placeholder="org@example.com" required value="{{ form.email.value|default:'' }}">
+                {% if form.email.errors %}<div style="color:var(--error);font-size:12px;margin-top:4px;">{{ form.email.errors.0 }}</div>{% endif %}
+            </div>
+            <div class="form-group">
+                <label class="form-label">Password</label>
+                <input type="password" name="password" class="form-control" placeholder="Your password" required>
+                {% if form.password.errors %}<div style="color:var(--error);font-size:12px;margin-top:4px;">{{ form.password.errors.0 }}</div>{% endif %}
+            </div>
+            <button type="submit" class="btn btn-gradient" style="width:100%;justify-content:center;margin-top:8px;">
+                <i class="fas fa-sign-in-alt"></i>
+                Sign In
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            Don't have an account? <a href="{% url 'register' %}">Create one free</a>
+        </div>
+    </div>
+
+    <div style="text-align:center;margin-top:20px;">
+        <a href="/" style="color:var(--text-muted);font-size:13px;text-decoration:none;">← Back to Home</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,1 @@
+"""HashDocs package"""

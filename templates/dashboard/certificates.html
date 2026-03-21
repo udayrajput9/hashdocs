@@ -1,0 +1,80 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}Certificates{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">All Certificates</div>
+        <div class="page-sub">Every certificate issued by your organization</div>
+    </div>
+    <a href="{% url 'template_list' %}" class="btn btn-gradient">
+        <i class="fas fa-plus"></i> Issue More
+    </a>
+</div>
+
+{% if certificates %}
+<div class="card">
+    <div class="table-wrap">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Recipient</th>
+                    <th>Email</th>
+                    <th>Status</th>
+                    <th>Hash</th>
+                    <th>Blockchain</th>
+                    <th>Issued</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for cert in certificates %}
+                <tr>
+                    <td style="font-weight:600;">{{ cert.recipient_name }}</td>
+                    <td style="color:var(--text-muted);">{{ cert.recipient_email|default:"—" }}</td>
+                    <td>
+                        <span class="badge {% if cert.status == 'issued' %}badge-success{% elif cert.status == 'revoked' %}badge-danger{% else %}badge-warning{% endif %}">
+                            {{ cert.status|title }}
+                        </span>
+                    </td>
+                    <td>
+                        {% if cert.cert_hash %}
+                        <span class="hash-display" title="{{ cert.cert_hash }}" onclick="navigator.clipboard.writeText('{{ cert.cert_hash }}')">
+                            {{ cert.cert_hash|slice:":14" }}...
+                        </span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>
+                        {% if cert.tx_hash %}
+                            <a href="https://amoy.polygonscan.com/tx/{{ cert.tx_hash }}" target="_blank" class="badge badge-success">
+                                <i class="fab fa-ethereum"></i> On-Chain
+                            </a>
+                        {% else %}
+                            <span class="badge badge-warning">Unsigned</span>
+                        {% endif %}
+                    </td>
+                    <td style="font-size:12px;color:var(--text-muted);">{{ cert.issued_at|date:"d M Y" }}</td>
+                    <td>
+                        <div style="display:flex;gap:6px;">
+                            <a href="{% url 'certificate_detail' cert.id %}" class="btn btn-secondary btn-sm"><i class="fas fa-eye"></i></a>
+                            <a href="{% url 'verify_certificate' cert.id %}" target="_blank" class="btn btn-secondary btn-sm"><i class="fas fa-external-link-alt"></i></a>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-id-card"></i></div>
+    <div class="empty-title">No certificates issued yet</div>
+    <div class="empty-sub">Create a template and bulk generate from CSV to issue certificates</div>
+    <a href="{% url 'template_list' %}" class="btn btn-gradient">
+        <i class="fas fa-paint-brush"></i> Open Builder
+    </a>
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}HashDocs – Blockchain Certificate Platform{% endblock %}
+{% block body_class %}landing-body{% endblock %}
+
+{% block content %}
+
+<!-- Navbar -->
+<nav class="landing-nav">
+    <a href="/" class="landing-logo">
+        <div class="landing-logo-icon">
+            <i class="fas fa-certificate" style="color:white;font-size:16px;"></i>
+        </div>
+        HashDocs
+    </a>
+    <div class="landing-nav-links">
+        <a href="{% url 'login' %}" class="btn btn-secondary btn-sm">Sign In</a>
+        <a href="{% url 'register' %}" class="btn btn-gradient btn-sm">Get Started Free</a>
+    </div>
+</nav>
+
+<!-- Hero -->
+<section class="hero">
+    <div class="hero-content">
+        <div class="hero-badge">
+            <i class="fas fa-shield-alt"></i>
+            Powered by Polygon Blockchain + MetaMask
+        </div>
+        <h1 class="hero-title">
+            Issue Certificates<br>
+            That <span class="gradient-text">Can't Be Faked</span>
+        </h1>
+        <p class="hero-sub">
+            Design beautiful certificates with our Canva-like builder, bulk-generate from CSV, and anchor every hash on the blockchain — with MetaMask, for free.
+        </p>
+        <div class="hero-actions">
+            <a href="{% url 'register' %}" class="btn btn-gradient btn-lg">
+                <i class="fas fa-rocket"></i>
+                Start Issuing Free
+            </a>
+            <a href="{% url 'login' %}" class="btn btn-secondary btn-lg">
+                <i class="fas fa-sign-in-alt"></i>
+                Sign In
+            </a>
+        </div>
+    </div>
+</section>
+
+<!-- Features -->
+<section class="features-section">
+    <div style="text-align:center; margin-bottom:20px;">
+        <span class="section-tag">Core Features</span>
+        <h2 class="section-title" style="text-align:center;">Everything You Need</h2>
+        <p class="section-sub" style="text-align:center; margin:0 auto;">From design to issuance to verification — all in one place.</p>
+    </div>
+
+    <div class="features-grid">
+        <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(79,142,247,0.1);color:var(--blue);">
+                <i class="fas fa-paint-brush"></i>
+            </div>
+            <h3 class="feature-title">Canva-Style Builder</h3>
+            <p class="feature-desc">Drag & drop text, images, shapes and dynamic fields. Design professional certificates right in the browser with a pixel-perfect live canvas.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(139,92,246,0.1);color:var(--purple);">
+                <i class="fas fa-table"></i>
+            </div>
+            <h3 class="feature-title">One-Click Bulk Generation</h3>
+            <p class="feature-desc">Upload a CSV with names, emails, and custom data. Click Generate — every person gets a unique, personalized certificate instantly.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(245,158,11,0.1);color:var(--gold);">
+                <i class="fab fa-ethereum"></i>
+            </div>
+            <h3 class="feature-title">MetaMask Blockchain Anchoring</h3>
+            <p class="feature-desc">Each certificate's SHA-256 hash is signed with MetaMask and anchored on the Polygon network. No paid API needed — completely free.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(16,185,129,0.1);color:var(--success);">
+                <i class="fas fa-qrcode"></i>
+            </div>
+            <h3 class="feature-title">Instant QR Verification</h3>
+            <p class="feature-desc">Every certificate includes a QR code that links to a tamper-proof public verification page. Anyone can verify in seconds, no account required.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(236,72,153,0.1);color:#ec4899;">
+                <i class="fas fa-cloud-upload-alt"></i>
+            </div>
+            <h3 class="feature-title">IPFS Decentralized Storage</h3>
+            <p class="feature-desc">Certificate images are pinned to IPFS via nft.storage (free), ensuring permanent, censorship-resistant access to every document.</p>
+        </div>
+
+        <div class="feature-card">
+            <div class="feature-icon" style="background:rgba(79,142,247,0.1);color:var(--blue);">
+                <i class="fas fa-building"></i>
+            </div>
+            <h3 class="feature-title">Multi-Tenant Organization Portal</h3>
+            <p class="feature-desc">Each organization gets its own dashboard, template library, and issuance history. Register, connect your wallet, and start in minutes.</p>
+        </div>
+    </div>
+</section>
+
+<!-- CTA -->
+<section style="padding:80px 40px; text-align:center; position:relative;">
+    <div style="max-width:600px;margin:0 auto;">
+        <h2 class="section-title">Ready to Eliminate<br>Certificate Fraud?</h2>
+        <p class="section-sub" style="margin:16px auto 32px;">Join organizations using HashDocs to issue tamper-proof credentials on the blockchain.</p>
+        <a href="{% url 'register' %}" class="btn btn-gradient btn-lg">
+            <i class="fas fa-certificate"></i>
+            Get Started — It's Free
+        </a>
+    </div>
+</section>
+
+<!-- Footer -->
+<footer style="padding:24px 60px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;color:var(--text-muted);font-size:13px;">
+    <div>© 2024 HashDocs. Blockchain-powered certificate platform.</div>
+    <div style="display:flex;align-items:center;gap:8px;">
+        <i class="fab fa-ethereum" style="color:var(--purple);"></i>
+        <span>Polygon Amoy Testnet</span>
+        <span>•</span>
+        <i class="fas fa-lock" style="color:var(--blue);"></i>
+        <span>MetaMask</span>
+    </div>
+</footer>
+
+{% endblock %}

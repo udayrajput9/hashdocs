@@ -1,0 +1,121 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}Dashboard{% endblock %}
+
+{% block page_content %}
+
+<!-- Stats Grid -->
+<div class="stat-grid">
+    <div class="stat-card blue">
+        <div class="stat-icon blue"><i class="fas fa-layer-group"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.templates }}</div>
+            <div class="stat-label">Templates</div>
+        </div>
+    </div>
+    <div class="stat-card green">
+        <div class="stat-icon green"><i class="fas fa-certificate"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.issued }}</div>
+            <div class="stat-label">Certificates Issued</div>
+        </div>
+    </div>
+    <div class="stat-card purple">
+        <div class="stat-icon purple"><i class="fas fa-chart-bar"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{{ stats.total }}</div>
+            <div class="stat-label">Total Generated</div>
+        </div>
+    </div>
+    <div class="stat-card gold">
+        <div class="stat-icon gold"><i class="fab fa-ethereum"></i></div>
+        <div class="stat-info">
+            <div class="stat-value">{% if request.user.wallet_address %}✓{% else %}—{% endif %}</div>
+            <div class="stat-label">Wallet Connected</div>
+        </div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;">
+    <!-- Recent Certificates -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">Recent Certificates</span>
+            <a href="{% url 'certificate_list' %}" class="btn btn-secondary btn-sm">View All</a>
+        </div>
+        <div class="table-wrap">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>Recipient</th>
+                        <th>Status</th>
+                        <th>Date</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for cert in recent_certs %}
+                    <tr>
+                        <td>{{ cert.recipient_name }}</td>
+                        <td><span class="badge badge-success">{{ cert.status|title }}</span></td>
+                        <td style="font-size:12px;color:var(--text-muted);">{{ cert.issued_at|date:"d M Y" }}</td>
+                        <td>
+                            <a href="{% url 'verify_certificate' cert.id %}" target="_blank" class="btn btn-secondary btn-sm">
+                                <i class="fas fa-external-link-alt"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="4" style="text-align:center;padding:32px;color:var(--text-muted);">
+                            No certificates yet. <a href="{% url 'template_list' %}" style="color:var(--blue);">Create your first template →</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Template Library -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title">My Templates</span>
+            <a href="{% url 'template_create' %}" class="btn btn-gradient btn-sm">
+                <i class="fas fa-plus"></i> New
+            </a>
+        </div>
+        <div class="card-body" style="padding:16px;">
+            {% if templates %}
+                {% for t in templates %}
+                <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--border);">
+                    <div style="display:flex;align-items:center;gap:12px;">
+                        <div style="width:40px;height:40px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;">
+                            <i class="fas fa-file-certificate" style="color:white;"></i>
+                        </div>
+                        <div>
+                            <div style="font-weight:600;font-size:14px;">{{ t.name }}</div>
+                            <div style="font-size:12px;color:var(--text-muted);">{{ t.certificate_count }} certificate{{ t.certificate_count|pluralize }}</div>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:6px;">
+                        <a href="{% url 'template_edit' t.id %}" class="btn btn-secondary btn-sm"><i class="fas fa-edit"></i></a>
+                        <a href="{% url 'bulk_generate_page' t.id %}" class="btn btn-gradient btn-sm"><i class="fas fa-bolt"></i> Generate</a>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-layer-group"></i></div>
+                    <div class="empty-title">No templates yet</div>
+                    <div class="empty-sub">Create a certificate template with the Canva-style builder</div>
+                    <a href="{% url 'template_create' %}" class="btn btn-gradient">
+                        <i class="fas fa-paint-brush"></i> Open Builder
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}

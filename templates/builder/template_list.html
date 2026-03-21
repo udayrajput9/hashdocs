@@ -1,0 +1,69 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}Template Library{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Certificate Templates</div>
+        <div class="page-sub">Design and manage your certificate templates</div>
+    </div>
+    <a href="{% url 'template_create' %}" class="btn btn-gradient">
+        <i class="fas fa-plus"></i> New Template
+    </a>
+</div>
+
+{% if templates %}
+<div class="template-grid">
+    {% for t in templates %}
+    <div class="template-card">
+        <div class="template-preview">
+            {% if t.thumbnail %}
+                <img src="{{ t.thumbnail.url }}" alt="{{ t.name }}">
+            {% else %}
+                <div class="template-preview-placeholder"><i class="fas fa-certificate"></i></div>
+            {% endif %}
+            <div class="template-actions-overlay">
+                <a href="{% url 'template_edit' t.id %}" class="btn btn-secondary btn-sm">
+                    <i class="fas fa-edit"></i> Edit
+                </a>
+                <a href="{% url 'bulk_generate_page' t.id %}" class="btn btn-gradient btn-sm">
+                    <i class="fas fa-bolt"></i> Generate
+                </a>
+            </div>
+        </div>
+        <div class="template-info">
+            <div>
+                <div class="template-name">{{ t.name }}</div>
+                <div class="template-meta">
+                    <span class="badge badge-purple">{{ t.category|title }}</span>
+                    <span style="margin-left:6px;color:var(--text-muted);font-size:11px;">{{ t.certificate_count }} issued</span>
+                </div>
+            </div>
+            <div style="display:flex;gap:6px;">
+                <a href="{% url 'bulk_generate_page' t.id %}" class="btn btn-gradient btn-sm" title="Bulk Generate">
+                    <i class="fas fa-bolt"></i>
+                </a>
+                <form method="post" action="{% url 'template_delete' t.id %}" style="display:inline;" 
+                      onsubmit="return confirm('Delete {{ t.name }}?')">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger btn-sm" title="Delete">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon"><i class="fas fa-paint-brush"></i></div>
+    <div class="empty-title">No templates yet</div>
+    <div class="empty-sub">Create your first certificate template using the Canva-style builder</div>
+    <a href="{% url 'template_create' %}" class="btn btn-gradient">
+        <i class="fas fa-plus"></i> Create First Template
+    </a>
+</div>
+{% endif %}
+{% endblock %}

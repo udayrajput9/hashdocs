@@ -1,0 +1,125 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Certificate Verification – HashDocs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body class="verify-body">
+
+<div class="verify-card">
+    <!-- Header -->
+    <div class="verify-header">
+        <div class="verify-check">
+            <i class="fas fa-check"></i>
+        </div>
+        <div>
+            <div class="verify-title">Certificate Verified ✓</div>
+            <div class="verify-subtitle">This certificate is authentic and tamper-proof</div>
+        </div>
+        <div style="margin-left:auto;">
+            <a href="/" style="color:var(--text-muted);font-size:13px;text-decoration:none;display:flex;align-items:center;gap:6px;">
+                <div style="width:24px;height:24px;background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;"><i class="fas fa-certificate" style="color:white;"></i></div>
+                HashDocs
+            </a>
+        </div>
+    </div>
+
+    <div class="verify-body-content">
+        <!-- Certificate Preview -->
+        {% if cert.certificate_image %}
+        <img src="{{ cert.certificate_image.url }}" alt="Certificate" class="cert-preview-img">
+        {% endif %}
+
+        <!-- Details -->
+        <div class="detail-row">
+            <span class="detail-label">Recipient</span>
+            <span class="detail-value plain" style="font-weight:700;font-size:16px;">{{ cert.recipient_name }}</span>
+        </div>
+        {% if cert.recipient_email %}
+        <div class="detail-row">
+            <span class="detail-label">Email</span>
+            <span class="detail-value plain">{{ cert.recipient_email }}</span>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <span class="detail-label">Issued By</span>
+            <span class="detail-value plain">{{ cert.organization.name }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Issue Date</span>
+            <span class="detail-value plain">{{ cert.issued_at|date:"d F Y" }}</span>
+        </div>
+        <div class="detail-row">
+            <span class="detail-label">Certificate ID</span>
+            <span class="detail-value">{{ cert.id }}</span>
+        </div>
+        {% if cert.cert_hash %}
+        <div class="detail-row">
+            <span class="detail-label">SHA-256 Hash</span>
+            <span class="detail-value" title="Click to copy" onclick="navigator.clipboard.writeText('{{ cert.cert_hash }}')" style="cursor:pointer;" title="{{ cert.cert_hash }}">
+                {{ cert.cert_hash|slice:":20" }}...
+                <i class="fas fa-copy" style="font-size:11px;margin-left:4px;color:var(--text-muted);"></i>
+            </span>
+        </div>
+        {% endif %}
+        {% if cert.tx_hash %}
+        <div class="detail-row">
+            <span class="detail-label">Blockchain TX</span>
+            <span class="detail-value">
+                <a href="{{ polygon_tx_url }}" target="_blank" style="color:var(--success);display:flex;align-items:center;gap:6px;justify-content:flex-end;">
+                    {{ cert.tx_hash|slice:":16" }}...
+                    <i class="fas fa-external-link-alt" style="font-size:11px;"></i>
+                </a>
+            </span>
+        </div>
+        {% else %}
+        <div class="detail-row">
+            <span class="detail-label">Blockchain</span>
+            <span class="detail-value"><span class="badge badge-warning">Signature Pending</span></span>
+        </div>
+        {% endif %}
+        {% if cert.ipfs_cid %}
+        <div class="detail-row">
+            <span class="detail-label">IPFS CID</span>
+            <span class="detail-value">
+                <a href="https://ipfs.io/ipfs/{{ cert.ipfs_cid }}" target="_blank" style="color:var(--blue);">
+                    {{ cert.ipfs_cid|slice:":16" }}...
+                </a>
+            </span>
+        </div>
+        {% endif %}
+        <div class="detail-row">
+            <span class="detail-label">Verifications</span>
+            <span class="detail-value plain" style="color:var(--text-secondary);">{{ verification_count }} times</span>
+        </div>
+
+        <!-- Extra CSV Fields -->
+        {% for key, val in cert.extra_data.items %}
+        {% if key != 'name' and key != 'email' and val %}
+        <div class="detail-row">
+            <span class="detail-label">{{ key|title }}</span>
+            <span class="detail-value plain">{{ val }}</span>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Footer -->
+    <div style="padding:20px 32px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+        <div style="font-size:12px;color:var(--text-muted);">
+            <i class="fas fa-shield-alt" style="color:var(--success);"></i>
+            Verified by HashDocs Blockchain Platform
+        </div>
+        {% if cert.qr_code %}
+        <img src="{{ cert.qr_code.url }}" alt="QR Code" style="width:60px;height:60px;">
+        {% endif %}
+    </div>
+</div>
+
+</body>
+</html>

@@ -1,0 +1,168 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block page_title %}Organization Profile{% endblock %}
+
+{% block page_content %}
+<div class="page-header">
+    <div>
+        <div class="page-title">Organization Profile</div>
+        <div class="page-sub">Manage your organization details and wallet</div>
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 2fr;gap:24px;">
+
+    <!-- Profile Card -->
+    <div>
+        <div class="card">
+            <div class="card-body" style="text-align:center;padding:32px 24px;">
+                {% if request.user.logo %}
+                    <img src="{{ request.user.logo.url }}" alt="Logo"
+                        style="width:90px;height:90px;border-radius:50%;object-fit:cover;border:3px solid var(--blue);margin-bottom:16px;">
+                {% else %}
+                    <div style="width:90px;height:90px;border-radius:50%;background:linear-gradient(135deg,var(--blue),var(--purple));display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:800;color:white;margin:0 auto 16px;">
+                        {{ request.user.name|slice:":1"|upper }}
+                    </div>
+                {% endif %}
+                <div style="font-size:18px;font-weight:800;margin-bottom:4px;">{{ request.user.name }}</div>
+                <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">{{ request.user.email }}</div>
+
+                {% if request.user.is_verified %}
+                    <span class="badge badge-success"><i class="fas fa-check-circle"></i> KYC Verified</span>
+                {% else %}
+                    <span class="badge badge-warning"><i class="fas fa-clock"></i> Pending Verification</span>
+                {% endif %}
+
+                <hr class="divider">
+
+                <div style="text-align:left;">
+                    {% if request.user.phone %}
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-secondary);">
+                        <i class="fas fa-phone" style="color:var(--blue);width:16px;"></i>{{ request.user.phone }}
+                    </div>
+                    {% endif %}
+                    {% if request.user.website %}
+                    <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;font-size:13px;color:var(--text-secondary);">
+                        <i class="fas fa-globe" style="color:var(--blue);width:16px;"></i>
+                        <a href="{{ request.user.website }}" target="_blank" style="color:var(--blue);">{{ request.user.website }}</a>
+                    </div>
+                    {% endif %}
+                    {% if request.user.address %}
+                    <div style="display:flex;gap:10px;font-size:13px;color:var(--text-secondary);">
+                        <i class="fas fa-map-marker-alt" style="color:var(--blue);width:16px;margin-top:2px;"></i>
+                        <span>{{ request.user.address }}</span>
+                    </div>
+                    {% endif %}
+                </div>
+
+                {% if request.user.wallet_address %}
+                <div style="margin-top:16px;padding:10px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:8px;text-align:left;">
+                    <div style="font-size:10px;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:4px;">Connected Wallet</div>
+                    <div style="font-family:monospace;font-size:11px;color:var(--success);word-break:break-all;">{{ request.user.wallet_address }}</div>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="card" style="margin-top:16px;">
+            <div class="card-header"><span class="card-title">Quick Stats</span></div>
+            <div class="card-body">
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);">
+                    <span style="font-size:13px;color:var(--text-secondary);">Templates</span>
+                    <span style="font-weight:700;color:var(--blue);">{{ request.user.templates.count }}</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;">
+                    <span style="font-size:13px;color:var(--text-secondary);">Certificates Issued</span>
+                    <span style="font-weight:700;color:var(--success);">{{ request.user.certificates.count }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Form -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-title"><i class="fas fa-edit" style="color:var(--blue);"></i> Edit Profile</span>
+        </div>
+        <div class="card-body">
+            <form method="post" enctype="multipart/form-data">
+                {% csrf_token %}
+
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
+                    <div class="form-group">
+                        <label class="form-label">Organization Name</label>
+                        <input type="text" name="name" class="form-control" value="{{ form.name.value|default:request.user.name }}" required>
+                        {% if form.name.errors %}<div style="color:var(--error);font-size:12px;margin-top:4px;">{{ form.name.errors.0 }}</div>{% endif %}
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Phone</label>
+                        <input type="text" name="phone" class="form-control" value="{{ form.phone.value|default:request.user.phone }}">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Website</label>
+                    <input type="url" name="website" class="form-control" value="{{ form.website.value|default:request.user.website|default:'' }}">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Address</label>
+                    <textarea name="address" class="form-control" rows="3">{{ form.address.value|default:request.user.address }}</textarea>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">MetaMask Wallet Address</label>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" name="wallet_address" class="form-control" 
+                            value="{{ form.wallet_address.value|default:request.user.wallet_address|default:'' }}"
+                            placeholder="0x... (connect MetaMask or paste manually)">
+                        <button type="button" class="btn btn-secondary" onclick="autoConnectWallet()" title="Connect MetaMask">
+                            <i class="fab fa-ethereum"></i>
+                        </button>
+                    </div>
+                    <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">
+                        Used for signing certificate hashes on Polygon Amoy testnet
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Organization Logo</label>
+                    <input type="file" name="logo" class="form-control" accept="image/*">
+                    {% if request.user.logo %}
+                    <div style="font-size:12px;color:var(--text-muted);margin-top:4px;">
+                        Current: <a href="{{ request.user.logo.url }}" target="_blank" style="color:var(--blue);">View current logo</a>
+                    </div>
+                    {% endif %}
+                </div>
+
+                <hr class="divider">
+
+                <button type="submit" class="btn btn-gradient">
+                    <i class="fas fa-save"></i> Save Changes
+                </button>
+                <a href="{% url 'dashboard' %}" class="btn btn-secondary" style="margin-left:8px;">Cancel</a>
+            </form>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block page_js %}
+<script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
+<script>
+async function autoConnectWallet() {
+    if (!window.ethereum) {
+        alert('MetaMask is not installed.');
+        return;
+    }
+    try {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        document.querySelector('input[name="wallet_address"]').value = accounts[0];
+    } catch(e) {
+        alert('MetaMask connection failed: ' + e.message);
+    }
+}
+</script>
+{% endblock %}

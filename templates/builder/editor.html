@@ -1,0 +1,508 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Builder – {{ template.name }} | HashDocs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.0/fabric.min.js"></script>
+    <style>
+        body { overflow: hidden; }
+        .editor-layout { height: 100vh; }
+        .saving-indicator {
+            position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+            background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success);
+            color: var(--success); font-size: 13px; padding: 6px 20px;
+            border-radius: 100px; display: none; z-index: 200; align-items: center; gap: 6px;
+        }
+        .color-swatch { width: 24px; height: 24px; border-radius: 4px; cursor: pointer; border: 2px solid transparent; transition: all 0.15s; flex-shrink: 0; }
+        .color-swatch:hover, .color-swatch.selected { border-color: white; transform: scale(1.2); }
+        .panel-btn { display: block; width: 100%; padding: 8px 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: 6px; color: var(--text-primary); font-size: 12px; font-weight: 600; cursor: pointer; text-align: left; margin-bottom: 6px; display: flex; align-items: center; gap: 8px; transition: all 0.15s; }
+        .panel-btn:hover { border-color: var(--blue); background: rgba(79,142,247,0.07); }
+        .prop-label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; margin-top: 12px; }
+        .prop-input { width: 100%; background: var(--bg-primary); border: 1px solid var(--border); border-radius: 6px; padding: 7px 10px; color: var(--text-primary); font-size: 13px; outline: none; }
+        .prop-input:focus { border-color: var(--blue); }
+    </style>
+</head>
+<body>
+
+<div id="saving-indicator" class="saving-indicator">
+    <i class="fas fa-check-circle"></i> Saved
+</div>
+
+<div class="editor-layout" style="display:flex;height:100vh;overflow:hidden;">
+
+    <!-- Left Tool Sidebar -->
+    <div class="editor-sidebar">
+        <div style="padding:8px 0;border-bottom:1px solid var(--border);width:100%;margin-bottom:8px;">
+            <a href="{% url 'template_list' %}" class="editor-tool" title="Back">
+                <i class="fas fa-arrow-left"></i>
+                <span>Back</span>
+            </a>
+        </div>
+        <button class="editor-tool active" id="tool-select" onclick="setTool('select')" title="Select">
+            <i class="fas fa-mouse-pointer"></i><span>Select</span>
+        </button>
+        <button class="editor-tool" id="tool-text" onclick="addText()" title="Add Text">
+            <i class="fas fa-font"></i><span>Text</span>
+        </button>
+        <button class="editor-tool" id="tool-rect" onclick="addRect()" title="Add Rectangle">
+            <i class="fas fa-square"></i><span>Rect</span>
+        </button>
+        <button class="editor-tool" id="tool-line" onclick="addLine()" title="Add Line">
+            <i class="fas fa-minus"></i><span>Line</span>
+        </button>
+        <button class="editor-tool" id="tool-img" onclick="document.getElementById('imgUpload').click()" title="Add Image">
+            <i class="fas fa-image"></i><span>Image</span>
+        </button>
+        <input type="file" id="imgUpload" accept="image/*" style="display:none;" onchange="addImage(event)">
+        <div style="border-top:1px solid var(--border);padding-top:8px;margin-top:auto;width:100%;">
+            <button class="editor-tool" onclick="deleteSelected()" title="Delete">
+                <i class="fas fa-trash" style="color:var(--error);"></i><span>Delete</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Left Element Panel -->
+    <div class="editor-panel" style="width:230px;">
+        <div class="panel-section">
+            <div class="panel-section-title">Elements</div>
+            <button class="panel-btn" onclick="addText()"><i class="fas fa-heading" style="color:var(--blue);"></i> Heading</button>
+            <button class="panel-btn" onclick="addBodyText()"><i class="fas fa-paragraph" style="color:var(--text-secondary);"></i> Body Text</button>
+            <button class="panel-btn" onclick="addLine()"><i class="fas fa-minus" style="color:var(--success);"></i> Divider Line</button>
+            <button class="panel-btn" onclick="addRect()"><i class="fas fa-square" style="color:var(--purple);"></i> Rectangle</button>
+            <button class="panel-btn" onclick="addCircle()"><i class="fas fa-circle" style="color:var(--gold);"></i> Circle</button>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-section-title">Dynamic Fields</div>
+            <div style="font-size:11px;color:var(--text-muted);margin-bottom:8px;">Click to insert placeholder</div>
+            <span class="field-chip" onclick="addDynamicField('{{name}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{name}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{date}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{date}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{cert_id}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{cert_id}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{organization}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{organization}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{course}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{course}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{grade}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{grade}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{score}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{score}}</span>
+            <span class="field-chip" onclick="addDynamicField('{{email}}')"><i class="fas fa-code" style="font-size:9px;"></i> {{email}}</span>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-section-title">Background</div>
+            <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;">
+                <div class="color-swatch selected" style="background:#ffffff;" onclick="setBg('#ffffff')" title="White"></div>
+                <div class="color-swatch" style="background:#f8f4e9;" onclick="setBg('#f8f4e9')" title="Cream"></div>
+                <div class="color-swatch" style="background:#e8f4f8;" onclick="setBg('#e8f4f8')" title="Light Blue"></div>
+                <div class="color-swatch" style="background:#f0f8ee;" onclick="setBg('#f0f8ee')" title="Light Green"></div>
+                <div class="color-swatch" style="background:#1a1a2e;" onclick="setBg('#1a1a2e')" title="Dark"></div>
+                <div class="color-swatch" style="background:#0f3460;" onclick="setBg('#0f3460')" title="Navy"></div>
+                <div class="color-swatch" style="background:linear-gradient(135deg,#667eea,#764ba2);" onclick="setBg('#764ba2')" title="Purple"></div>
+            </div>
+            <div style="margin-top:8px;">
+                <label style="font-size:11px;color:var(--text-muted);">Custom Color</label>
+                <input type="color" value="#ffffff" id="bgColorPicker" onchange="setBg(this.value)" style="width:100%;height:28px;border:none;background:none;cursor:pointer;border-radius:4px;">
+            </div>
+        </div>
+
+        <div class="panel-section">
+            <div class="panel-section-title">Canvas Size</div>
+            <button class="panel-btn" onclick="setCanvasSize(1000,700)"><i class="fas fa-file" style="color:var(--blue);"></i> A4 Landscape</button>
+            <button class="panel-btn" onclick="setCanvasSize(700,1000)"><i class="fas fa-file-alt" style="color:var(--purple);"></i> A4 Portrait</button>
+            <button class="panel-btn" onclick="setCanvasSize(1000,1000)"><i class="fas fa-square" style="color:var(--gold);"></i> Square 1:1</button>
+        </div>
+    </div>
+
+    <!-- Canvas Area -->
+    <div class="canvas-area">
+        <!-- Toolbar -->
+        <div class="canvas-toolbar">
+            <div style="display:flex;align-items:center;gap:8px;flex:1;">
+                <input type="text" id="templateNameInput" value="{{ template.name }}" 
+                    style="background:transparent;border:none;color:var(--text-primary);font-weight:700;font-size:15px;outline:none;min-width:0;"
+                    onchange="templateName = this.value">
+                <span style="font-size:12px;color:var(--text-muted);" id="auto-save-status">Auto-saved</span>
+            </div>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-secondary btn-sm" onclick="zoomOut()"><i class="fas fa-search-minus"></i></button>
+                <span id="zoom-display" style="font-size:12px;color:var(--text-muted);padding:0 8px;align-self:center;">100%</span>
+                <button class="btn btn-secondary btn-sm" onclick="zoomIn()"><i class="fas fa-search-plus"></i></button>
+                <button class="btn btn-secondary btn-sm" onclick="resetZoom()">Reset</button>
+                <button class="btn btn-primary btn-sm" onclick="saveTemplate()">
+                    <i class="fas fa-save"></i> Save
+                </button>
+                <a href="{% url 'bulk_generate_page' template.id %}" class="btn btn-gradient btn-sm">
+                    <i class="fas fa-bolt"></i> Generate
+                </a>
+            </div>
+        </div>
+
+        <!-- Canvas Viewport -->
+        <div class="canvas-viewport" id="canvasViewport">
+            <canvas id="fabricCanvas"></canvas>
+        </div>
+    </div>
+
+    <!-- Right Property Panel -->
+    <div class="property-panel" id="property-panel">
+        <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:var(--text-muted);margin-bottom:16px;">Properties</div>
+
+        <div id="no-selection" style="text-align:center;padding:20px 0;color:var(--text-muted);font-size:13px;">
+            <i class="fas fa-mouse-pointer" style="font-size:24px;opacity:0.3;display:block;margin-bottom:8px;"></i>
+            Select an element to edit its properties
+        </div>
+
+        <div id="text-props" style="display:none;">
+            <div class="prop-label">Text Content</div>
+            <textarea id="prop-text" class="prop-input" rows="3" oninput="updateTextProp()"></textarea>
+
+            <div class="prop-label">Font Size</div>
+            <input type="range" id="prop-fontsize" min="8" max="120" value="24" class="prop-input" style="padding:0;" oninput="updateFontSize(this.value)">
+            <div style="font-size:12px;color:var(--text-muted);text-align:center;" id="fontsize-display">24px</div>
+
+            <div class="prop-label">Font Weight</div>
+            <div style="display:flex;gap:6px;">
+                <button class="panel-btn" style="flex:1;justify-content:center;" onclick="setFontWeight('normal')">Normal</button>
+                <button class="panel-btn" style="flex:1;justify-content:center;font-weight:bold;" onclick="setFontWeight('bold')">Bold</button>
+            </div>
+
+            <div class="prop-label">Alignment</div>
+            <div style="display:flex;gap:6px;">
+                <button class="panel-btn" style="flex:1;justify-content:center;" onclick="setTextAlign('left')"><i class="fas fa-align-left"></i></button>
+                <button class="panel-btn" style="flex:1;justify-content:center;" onclick="setTextAlign('center')"><i class="fas fa-align-center"></i></button>
+                <button class="panel-btn" style="flex:1;justify-content:center;" onclick="setTextAlign('right')"><i class="fas fa-align-right"></i></button>
+            </div>
+
+            <div class="prop-label">Color</div>
+            <input type="color" id="prop-color" class="prop-input" style="height:32px;padding:2px;" oninput="updateColor()">
+        </div>
+
+        <div id="shape-props" style="display:none;">
+            <div class="prop-label">Fill Color</div>
+            <input type="color" id="prop-fill" class="prop-input" style="height:32px;padding:2px;" oninput="updateFill()">
+
+            <div class="prop-label">Stroke Color</div>
+            <input type="color" id="prop-stroke" class="prop-input" style="height:32px;padding:2px;" value="#000000" oninput="updateStroke()">
+
+            <div class="prop-label">Opacity</div>
+            <input type="range" id="prop-opacity" min="0" max="1" step="0.01" value="1" class="prop-input" style="padding:0;" oninput="updateOpacity(this.value)">
+        </div>
+
+        <div id="common-props" style="display:none;margin-top:12px;">
+            <div class="prop-label">Position</div>
+            <div style="display:flex;gap:6px;">
+                <div>
+                    <div style="font-size:10px;color:var(--text-muted);">X</div>
+                    <input type="number" id="prop-x" class="prop-input" style="width:100%;" oninput="updatePosition()">
+                </div>
+                <div>
+                    <div style="font-size:10px;color:var(--text-muted);">Y</div>
+                    <input type="number" id="prop-y" class="prop-input" style="width:100%;" oninput="updatePosition()">
+                </div>
+            </div>
+            <div style="margin-top:12px;">
+                <button class="panel-btn" onclick="bringForward()"><i class="fas fa-layer-group"></i> Bring Forward</button>
+                <button class="panel-btn" onclick="sendBackward()"><i class="fas fa-layer-group" style="transform:scaleY(-1)"></i> Send Backward</button>
+                <button class="panel-btn" style="color:var(--error);" onclick="deleteSelected()"><i class="fas fa-trash"></i> Delete</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ═══════════════════════════════════
+//  HashDocs Certificate Builder JS
+// ═══════════════════════════════════
+
+const TEMPLATE_ID = "{{ template.id }}";
+const SAVE_URL = "{% url 'template_save' template.id %}";
+const CSRF_TOKEN = "{{ csrf_token }}";
+let templateName = "{{ template.name }}";
+let autoSaveTimer = null;
+
+// ── Initialize Fabric.js Canvas ──
+const canvas = new fabric.Canvas('fabricCanvas', {
+    width: {{ template.width|default:1000 }},
+    height: {{ template.height|default:700 }},
+    backgroundColor: '{{ template.background_color|default:"#ffffff" }}',
+    preserveObjectStacking: true,
+    selection: true,
+});
+
+// Load existing canvas data
+{% if canvas_json and canvas_json != '{}' %}
+try {
+    const existing = {{ canvas_json|safe }};
+    if (existing && existing.objects && existing.objects.length > 0) {
+        canvas.loadFromJSON(existing, canvas.renderAll.bind(canvas));
+    }
+} catch(e) { console.warn('Canvas data load error:', e); }
+{% endif %}
+
+// ── Zoom Controls ──
+let currentZoom = 1;
+function zoomIn()  { currentZoom = Math.min(currentZoom + 0.1, 3); canvas.setZoom(currentZoom); updateZoomDisplay(); }
+function zoomOut() { currentZoom = Math.max(currentZoom - 0.1, 0.3); canvas.setZoom(currentZoom); updateZoomDisplay(); }
+function resetZoom() { currentZoom = 1; canvas.setZoom(1); updateZoomDisplay(); }
+function updateZoomDisplay() { document.getElementById('zoom-display').textContent = Math.round(currentZoom * 100) + '%'; }
+
+// ── Tool Actions ──
+function setTool(tool) {
+    document.querySelectorAll('.editor-tool').forEach(b => b.classList.remove('active'));
+    const btn = document.getElementById('tool-' + tool);
+    if (btn) btn.classList.add('active');
+}
+
+function addText() {
+    const t = new fabric.Textbox('Type your text here', {
+        left: 100, top: 100, width: 400,
+        fontSize: 24, fontFamily: 'Inter', fill: '#333333',
+        fontWeight: 'normal', textAlign: 'left',
+    });
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    canvas.renderAll();
+    scheduleAutoSave();
+}
+
+function addBodyText() {
+    const t = new fabric.Textbox('Add your body text here', {
+        left: 100, top: 200, width: 500,
+        fontSize: 16, fontFamily: 'Inter', fill: '#555555', textAlign: 'left',
+    });
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    canvas.renderAll();
+    scheduleAutoSave();
+}
+
+function addDynamicField(field) {
+    const t = new fabric.Textbox(field, {
+        left: 150, top: 300, width: 300,
+        fontSize: 28, fontFamily: 'Inter', fill: '#1a1a2e',
+        fontWeight: 'bold', textAlign: 'center',
+    });
+    canvas.add(t);
+    canvas.setActiveObject(t);
+    canvas.renderAll();
+    scheduleAutoSave();
+}
+
+function addRect() {
+    const r = new fabric.Rect({
+        left: 80, top: 80, width: 200, height: 6,
+        fill: '#4f8ef7', rx: 3, ry: 3,
+    });
+    canvas.add(r);
+    canvas.setActiveObject(r);
+    canvas.renderAll();
+    scheduleAutoSave();
+}
+
+function addCircle() {
+    const c = new fabric.Circle({
+        left: 100, top: 100, radius: 50,
+        fill: 'rgba(139,92,246,0.2)', stroke: '#8b5cf6', strokeWidth: 2,
+    });
+    canvas.add(c);
+    canvas.setActiveObject(c);
+    canvas.renderAll();
+    scheduleAutoSave();
+}
+
+function addLine() {
+    const l = new fabric.Line([50, 0, 600, 0], {
+        left: 50, top: canvas.height / 2,
+        stroke: '#cccccc', strokeWidth: 2,
+    });
+    canvas.add(l);
+    canvas.setActiveObject(l);
+    canvas.renderAll();
+    scheduleAutoSave();
+}
+
+function addImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        fabric.Image.fromURL(e.target.result, function(img) {
+            img.scaleToWidth(Math.min(300, canvas.width / 2));
+            img.set({ left: 50, top: 50 });
+            canvas.add(img);
+            canvas.setActiveObject(img);
+            canvas.renderAll();
+        });
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+    scheduleAutoSave();
+}
+
+function deleteSelected() {
+    const obj = canvas.getActiveObject();
+    if (obj) {
+        if (obj.type === 'activeSelection') {
+            obj.getObjects().forEach(o => canvas.remove(o));
+            canvas.discardActiveObject();
+        } else {
+            canvas.remove(obj);
+        }
+        canvas.renderAll();
+        scheduleAutoSave();
+    }
+}
+
+function bringForward() { const o = canvas.getActiveObject(); if(o) { canvas.bringForward(o); canvas.renderAll(); } }
+function sendBackward() { const o = canvas.getActiveObject(); if(o) { canvas.sendBackwards(o); canvas.renderAll(); } }
+
+function setBg(color) {
+    canvas.setBackgroundColor(color, canvas.renderAll.bind(canvas));
+    scheduleAutoSave();
+}
+
+function setCanvasSize(w, h) {
+    canvas.setDimensions({ width: w, height: h });
+    canvas.renderAll();
+}
+
+// ── Property Updates ──
+function updateTextProp() {
+    const obj = canvas.getActiveObject();
+    if (obj && obj.type === 'textbox') {
+        obj.set('text', document.getElementById('prop-text').value);
+        canvas.renderAll();
+        scheduleAutoSave();
+    }
+}
+
+function updateFontSize(v) {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('fontSize', parseInt(v)); canvas.renderAll(); }
+    document.getElementById('fontsize-display').textContent = v + 'px';
+    scheduleAutoSave();
+}
+
+function setFontWeight(w) {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('fontWeight', w); canvas.renderAll(); scheduleAutoSave(); }
+}
+
+function setTextAlign(a) {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('textAlign', a); canvas.renderAll(); scheduleAutoSave(); }
+}
+
+function updateColor() {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('fill', document.getElementById('prop-color').value); canvas.renderAll(); scheduleAutoSave(); }
+}
+
+function updateFill() {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('fill', document.getElementById('prop-fill').value); canvas.renderAll(); scheduleAutoSave(); }
+}
+
+function updateStroke() {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('stroke', document.getElementById('prop-stroke').value); canvas.renderAll(); scheduleAutoSave(); }
+}
+
+function updateOpacity(v) {
+    const obj = canvas.getActiveObject();
+    if (obj) { obj.set('opacity', parseFloat(v)); canvas.renderAll(); scheduleAutoSave(); }
+}
+
+function updatePosition() {
+    const obj = canvas.getActiveObject();
+    const x = parseFloat(document.getElementById('prop-x').value);
+    const y = parseFloat(document.getElementById('prop-y').value);
+    if (obj && !isNaN(x) && !isNaN(y)) { obj.set({ left: x, top: y }); obj.setCoords(); canvas.renderAll(); }
+}
+
+// ── Selection Handler ──
+canvas.on('selection:created', updatePropertyPanel);
+canvas.on('selection:updated', updatePropertyPanel);
+canvas.on('selection:cleared', function() {
+    document.getElementById('no-selection').style.display = 'block';
+    document.getElementById('text-props').style.display = 'none';
+    document.getElementById('shape-props').style.display = 'none';
+    document.getElementById('common-props').style.display = 'none';
+});
+
+function updatePropertyPanel() {
+    const obj = canvas.getActiveObject();
+    if (!obj) return;
+    document.getElementById('no-selection').style.display = 'none';
+    document.getElementById('common-props').style.display = 'block';
+
+    // Position
+    document.getElementById('prop-x').value = Math.round(obj.left || 0);
+    document.getElementById('prop-y').value = Math.round(obj.top || 0);
+
+    if (obj.type === 'textbox' || obj.type === 'text' || obj.type === 'i-text') {
+        document.getElementById('text-props').style.display = 'block';
+        document.getElementById('shape-props').style.display = 'none';
+        document.getElementById('prop-text').value = obj.text || '';
+        document.getElementById('prop-fontsize').value = obj.fontSize || 24;
+        document.getElementById('fontsize-display').textContent = (obj.fontSize || 24) + 'px';
+        document.getElementById('prop-color').value = obj.fill || '#000000';
+    } else {
+        document.getElementById('text-props').style.display = 'none';
+        document.getElementById('shape-props').style.display = 'block';
+        document.getElementById('prop-fill').value = obj.fill || '#000000';
+        document.getElementById('prop-stroke').value = obj.stroke || '#000000';
+        document.getElementById('prop-opacity').value = obj.opacity !== undefined ? obj.opacity : 1;
+    }
+}
+
+// Object modify triggers auto-save
+canvas.on('object:modified', scheduleAutoSave);
+canvas.on('object:added', scheduleAutoSave);
+
+// ── Auto-Save ──
+function scheduleAutoSave() {
+    clearTimeout(autoSaveTimer);
+    document.getElementById('auto-save-status').textContent = 'Unsaved...';
+    autoSaveTimer = setTimeout(saveTemplate, 3000);
+}
+
+async function saveTemplate() {
+    const canvasJSON = canvas.toJSON(['selectable', 'evented']);
+    const thumbnail = canvas.toDataURL({ format: 'png', quality: 0.6, multiplier: 0.5 });
+
+    try {
+        const resp = await fetch(SAVE_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'X-CSRFToken': CSRF_TOKEN },
+            body: JSON.stringify({
+                name: document.getElementById('templateNameInput').value,
+                canvas_json: canvasJSON,
+                background: canvas.backgroundColor,
+                thumbnail_base64: thumbnail,
+            })
+        });
+        const data = await resp.json();
+        const indicator = document.getElementById('saving-indicator');
+        indicator.style.display = 'flex';
+        document.getElementById('auto-save-status').textContent = 'Saved ✓';
+        setTimeout(() => { indicator.style.display = 'none'; }, 2000);
+    } catch(e) {
+        document.getElementById('auto-save-status').textContent = 'Save failed!';
+        console.error('Save error:', e);
+    }
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', function(e) {
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    if (e.key === 'Delete' || e.key === 'Backspace') { deleteSelected(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') { e.preventDefault(); saveTemplate(); }
+    if ((e.ctrlKey || e.metaKey) && e.key === 'z') { /* undo not easily supported in fabric v5 */ }
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate Not Found – HashDocs</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+</head>
+<body class="verify-body">
+<div class="verify-card" style="text-align:center;padding:60px 40px;max-width:500px;">
+    <div style="font-size:64px;margin-bottom:20px;opacity:0.3;">
+        <i class="fas fa-times-circle" style="color:var(--error);"></i>
+    </div>
+    <h1 style="font-size:24px;font-weight:800;margin-bottom:12px;">Certificate Not Found</h1>
+    <p style="color:var(--text-secondary);font-size:14px;margin-bottom:24px;">
+        This certificate ID does not exist or may have been revoked.
+    </p>
+    <a href="/" class="btn btn-secondary">← Back to HashDocs</a>
+</div>
+</body>
+</html>

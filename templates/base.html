@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}HashDocs – Blockchain Certificate Platform{% endblock %}</title>
+    <meta name="description" content="HashDocs - Issue, manage, and verify blockchain-anchored digital certificates with MetaMask integration.">
+
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+    <!-- Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/main.css' %}">
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+<!-- Toast Notifications -->
+<div id="toast-container" class="toast-container">
+    {% if messages %}
+        {% for message in messages %}
+        <div class="toast toast-{{ message.tags }}" id="toast-{{ forloop.counter }}">
+            <i class="fas {% if message.tags == 'success' %}fa-check-circle{% elif message.tags == 'error' %}fa-times-circle{% else %}fa-info-circle{% endif %}"></i>
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    {% endif %}
+</div>
+
+{% block content %}{% endblock %}
+
+<!-- Core JS -->
+<script>
+    // Auto-dismiss toasts
+    document.querySelectorAll('.toast').forEach(function(toast, i) {
+        setTimeout(function() {
+            toast.classList.add('fade-out');
+            setTimeout(function() { toast.remove(); }, 400);
+        }, 4000 + i * 500);
+    });
+</script>
+
+{% block extra_js %}{% endblock %}
+</body>
+</html>
