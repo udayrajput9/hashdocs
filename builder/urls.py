@@ -12,4 +12,7 @@ urlpatterns = [
     path('cert/<uuid:cert_pk>/sign/', views.update_tx_hash, name='update_tx_hash'),
     path('gallery/', views.template_gallery, name='template_gallery'),
     path('gallery/use/<str:preset_id>/', views.template_use_preset, name='template_use_preset'),
+    path('<uuid:pk>/bulk/init/', views.bulk_generate_init, name='bulk_generate_init'),
+    path('cert/<uuid:cert_pk>/finalize/', views.bulk_generate_finalize, name='bulk_generate_finalize'),
+    path('<uuid:pk>/bulk/download/', views.bulk_download_zip, name='bulk_download_zip'),
 ]

@@ -26,6 +26,7 @@ from django.core.files.base import ContentFile
 from PIL import Image, ImageDraw, ImageFont, ImageColor
 from certificates.models import CertificateTemplate, Certificate
 from .presets import TEMPLATE_PRESETS
+from .utils_ipfs import upload_to_ipfs
 
 
 # ─── Template Management ────────────────────────────────────────────────────
@@ -142,23 +143,26 @@ def bulk_generate_page(request, pk):
 @login_required
 @require_http_methods(["POST"])
 def bulk_generate(request, pk):
+    return JsonResponse({'error': 'Deprecated. Use bulk/init/ instead.'}, status=400)
+
+@login_required
+@require_http_methods(["POST"])
+def bulk_generate_init(request, pk):
     """
-    1. Parse CSV
-    2. For each row: fill template fields → render image → generate QR → save DB record
-    3. Return ZIP download
+    Step 1:
+    Parse CSV. For each row: render BASE image (no QR) -> hash it -> save to DB as 'pending'.
+    Returns JSON list of generated hashes that the frontend needs to sign.
     """
     template = get_object_or_404(CertificateTemplate, id=pk, organization=request.user)
     csv_file = request.FILES.get('csv_file')
     if not csv_file:
-        messages.error(request, 'Please upload a CSV file.')
-        return redirect('bulk_generate_page', pk=pk)
+        return JsonResponse({'error': 'Please upload a CSV file.'}, status=400)
 
     try:
         df = pd.read_csv(csv_file)
         df.columns = [c.strip().lower() for c in df.columns]
     except Exception as e:
-        messages.error(request, f'Invalid CSV file: {e}')
-        return redirect('bulk_generate_page', pk=pk)
+        return JsonResponse({'error': f'Invalid CSV file: {e}'}, status=400)
 
     required_name_col = None
     for col in ['name', 'recipient_name', 'full_name', 'student_name']:
@@ -167,90 +171,176 @@ def bulk_generate(request, pk):
             break
 
     if not required_name_col:
-        messages.error(request, "CSV must have a 'name' column for recipient names.")
-        return redirect('bulk_generate_page', pk=pk)
+        return JsonResponse({'error': "CSV must have a 'name' column."}, status=400)
 
-    zip_buffer = io.BytesIO()
-    generated_ids = []
+    generated_certs = []
     errors = []
 
+    for idx, row in df.iterrows():
+        row_dict = {k: (str(v) if pd.notnull(v) else '') for k, v in row.to_dict().items()}
+        recipient_name = row_dict.get(required_name_col, f'Recipient {idx+1}').strip()
+        recipient_email = row_dict.get('email', '').strip()
+
+        cert_id = uuid_lib.uuid4()
+
+        try:
+            # Render Base Image (No QR)
+            cert_image = _render_certificate(
+                template=template,
+                recipient_name=recipient_name,
+                row_data=row_dict,
+                cert_id=str(cert_id),
+                org_name=request.user.name
+            )
+
+            img_bytes = BytesIO()
+            cert_image.save(img_bytes, format='PNG')
+            img_bytes.seek(0)
+            
+            # Hash Base Image
+            cert_hash = '0x' + hashlib.sha256(img_bytes.read()).hexdigest()
+            img_bytes.seek(0)
+
+            # Create Certificate Record in 'pending' state
+            verify_url = f"{request.scheme}://{request.get_host()}/verify/{cert_id}/"
+            cert = Certificate(
+                id=cert_id,
+                template=template,
+                organization=request.user,
+                recipient_name=recipient_name,
+                recipient_email=recipient_email,
+                extra_data=row_dict,
+                cert_hash=cert_hash,
+                verification_url=verify_url,
+                status='pending',
+            )
+            safe_name = recipient_name.replace(' ', '_').replace('/', '_')
+            cert_file_name = f"cert_{safe_name}_{cert_id}.png"
+            cert.certificate_image.save(cert_file_name, ContentFile(img_bytes.getvalue()), save=False)
+            cert.save()
+
+            generated_certs.append({
+                'id': str(cert_id),
+                'hash': cert_hash,
+                'name': recipient_name
+            })
+
+        except Exception as e:
+            errors.append(f"Row {idx+1} ({recipient_name}): {e}")
+            continue
+
+    return JsonResponse({
+        'status': 'ok',
+        'certificates': generated_certs,
+        'errors': errors
+    })
+
+
+@login_required
+@csrf_exempt
+@require_http_methods(["POST"])
+def bulk_generate_finalize(request, cert_pk):
+    """
+    Step 2:
+    Receives tx_hash for a pending cert.
+    Generates QR code (with verify URL).
+    Composites QR onto Base Image.
+    Uploads Final Image to IPFS.
+    Saves and marks as 'issued'.
+    """
+    try:
+        data = json.loads(request.body)
+        tx_hash = data.get('tx_hash', '').strip()
+        signature = data.get('signature', '').strip()
+        
+        cert = get_object_or_404(Certificate, id=cert_pk, organization=request.user, status='pending')
+        
+        # We need the base image
+        if not cert.certificate_image:
+            return JsonResponse({'error': 'Base image not found'}, status=400)
+            
+        base_img = Image.open(cert.certificate_image).convert('RGBA')
+        
+        # Generate QR Code
+        qr_img = _generate_qr(cert.verification_url)
+        
+        # Composite
+        final_img = _composite_qr(base_img, qr_img)
+        final_bytes = BytesIO()
+        final_img.save(final_bytes, format='PNG')
+        file_data = final_bytes.getvalue()
+        
+        # Upload to IPFS
+        filename = f"certificate_{cert.id}.png"
+        ipfs_cid, ipfs_url = upload_to_ipfs(file_data, filename)
+        
+        # Update DB
+        cert.tx_hash = tx_hash
+        cert.wallet_signature = signature
+        cert.ipfs_cid = ipfs_cid
+        cert.ipfs_url = ipfs_url
+        cert.status = 'issued'
+        
+        # Overwrite the base image with the final composite image
+        cert.certificate_image.save(filename, ContentFile(file_data), save=False)
+        
+        # Save QR code separately
+        qr_bytes = BytesIO()
+        qr_img.save(qr_bytes, format='PNG')
+        cert.qr_code.save(f"qr_{cert.id}.png", ContentFile(qr_bytes.getvalue()), save=False)
+        
+        cert.save()
+        
+        return JsonResponse({'status': 'ok', 'ipfs_cid': ipfs_cid, 'tx_hash': tx_hash})
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def bulk_download_zip(request, pk):
+    """
+    Step 3: Download ZIP of requested cert IDs
+    """
+    template = get_object_or_404(CertificateTemplate, id=pk, organization=request.user)
+    
+    cert_ids = []
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            cert_ids = data.get('cert_ids', [])
+        except:
+            pass
+    elif request.method == 'GET':
+        cert_ids = request.GET.get('ids', '').split(',')
+        
+    cert_ids = [c for c in cert_ids if c]
+    
+    certs = Certificate.objects.filter(
+        id__in=cert_ids, 
+        organization=request.user, 
+        status='issued'
+    )
+    
+    if not certs.exists():
+        messages.error(request, 'No issued certificates found to download.')
+        return redirect('bulk_generate_page', pk=pk)
+        
+    zip_buffer = io.BytesIO()
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for idx, row in df.iterrows():
-            row_dict = {k: (str(v) if v is not None else '') for k, v in row.to_dict().items()}
-            recipient_name = row_dict.get(required_name_col, f'Recipient {idx+1}').strip()
-            recipient_email = row_dict.get('email', '').strip()
-
-            # Generate unique cert ID
-            cert_id = uuid_lib.uuid4()
-
-            try:
-                # Render certificate image
-                cert_image = _render_certificate(
-                    template=template,
-                    recipient_name=recipient_name,
-                    row_data=row_dict,
-                    cert_id=str(cert_id),
-                    org_name=request.user.name
-                )
-
-                # Convert image to bytes
-                img_bytes = BytesIO()
-                cert_image.save(img_bytes, format='PNG')
-                img_bytes.seek(0)
-
-                # Compute SHA-256 hash
-                cert_hash = '0x' + hashlib.sha256(img_bytes.read()).hexdigest()
-                img_bytes.seek(0)
-
-                # Generate QR code
-                verify_url = f"{request.scheme}://{request.get_host()}/verify/{cert_id}/"
-                qr_img = _generate_qr(verify_url)
-
-                # Composite QR onto certificate
-                final_img = _composite_qr(cert_image, qr_img)
-                final_bytes = BytesIO()
-                final_img.save(final_bytes, format='PNG')
-                final_bytes.seek(0)
-
-                # Save to DB
-                cert = Certificate(
-                    id=cert_id,
-                    template=template,
-                    organization=request.user,
-                    recipient_name=recipient_name,
-                    recipient_email=recipient_email,
-                    extra_data=row_dict,
-                    cert_hash=cert_hash,
-                    verification_url=verify_url,
-                    status='issued',
-                )
-                safe_name = recipient_name.replace(' ', '_').replace('/', '_')
-                cert_file_name = f"cert_{safe_name}_{cert_id}.png"
-                cert.certificate_image.save(cert_file_name, ContentFile(final_bytes.getvalue()), save=False)
-
-                # Save QR
-                qr_bytes = BytesIO()
-                qr_img.save(qr_bytes, format='PNG')
-                cert.qr_code.save(f"qr_{cert_id}.png", ContentFile(qr_bytes.getvalue()), save=False)
-                cert.save()
-
-                generated_ids.append(str(cert_id))
-                zf.writestr(cert_file_name, final_bytes.getvalue())
-
-            except Exception as e:
-                errors.append(f"Row {idx+1} ({recipient_name}): {e}")
-                continue
-
+        for cert in certs:
+            if cert.certificate_image:
+                try:
+                    file_name = f"{cert.recipient_name.replace(' ', '_')}_{cert.id}.png"
+                    zf.writestr(file_name, cert.certificate_image.read())
+                except:
+                    pass
+                    
     zip_buffer.seek(0)
-    count = len(generated_ids)
-    if count > 0:
-        messages.success(request, f'{count} certificate(s) generated successfully! Check the ZIP download.')
-    if errors:
-        messages.warning(request, f'{len(errors)} row(s) had errors: ' + '; '.join(errors[:3]))
-
     response = HttpResponse(zip_buffer, content_type='application/zip')
     response['Content-Disposition'] = f'attachment; filename="certificates_{template.name}.zip"'
     return response
+# (Old bulk_generate execution body removed, replaced by async functions above)
 
 
 # ─── Certificate Rendering Engine ───────────────────────────────────────────

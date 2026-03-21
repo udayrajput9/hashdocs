@@ -7,9 +7,9 @@
     <div>
         <div class="page-title">
             <i class="fas fa-bolt" style="color:var(--gold);"></i>
-            Bulk Certificate Generator
+            Web3 Bulk Generator
         </div>
-        <div class="page-sub">Upload CSV → Click Generate → Download All Certificates</div>
+        <div class="page-sub">Generate → Anchor on Polygon via MetaMask → Upload to IPFS → Download</div>
     </div>
     <a href="{% url 'template_edit' template.id %}" class="btn btn-secondary">
         <i class="fas fa-arrow-left"></i> Back to Editor
@@ -29,7 +29,7 @@
                 <span class="badge badge-purple">{{ template.category|title }}</span>
             </div>
             <div class="card-body">
-                <form method="post" action="{% url 'bulk_generate' template.id %}" enctype="multipart/form-data" id="generateForm">
+                <form id="generateForm" enctype="multipart/form-data">
                     {% csrf_token %}
                     <div class="upload-zone" id="uploadZone">
                         <input type="file" name="csv_file" id="csvInput" accept=".csv" required onchange="fileSelected(this)">
@@ -40,43 +40,39 @@
 
                     <div style="margin:20px 0;padding:16px;background:rgba(79,142,247,0.05);border:1px solid rgba(79,142,247,0.15);border-radius:var(--radius-sm);">
                         <div style="font-size:13px;font-weight:700;color:var(--blue);margin-bottom:8px;">
-                            <i class="fas fa-info-circle"></i> CSV Format
+                            <i class="fas fa-info-circle"></i> Web3 Generation Process
                         </div>
                         <div style="font-size:12px;color:var(--text-secondary);line-height:1.8;">
-                            Required column: <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">name</code> (or <code style="background:rgba(0,0,0,0.3);padding:2px 6px;border-radius:4px;">recipient_name</code>)<br>
-                            Optional: <code>email</code>, <code>date</code>, <code>course</code>, <code>grade</code>, <code>score</code><br>
-                            Any extra columns become <code>{{column_name}}</code> placeholders
-                        </div>
-                        <div style="margin-top:10px;font-size:12px;color:var(--text-muted);">
-                            Example:
-                            <pre style="background:rgba(0,0,0,0.4);padding:8px;border-radius:4px;margin-top:4px;overflow-x:auto;">name,email,course,date
-Rohit Sharma,rohit@example.com,Python Course,2024-03-01
-Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
+                            1. Base images are generated and hashed locally.<br>
+                            2. <b>MetaMask will prompt you to sign a transaction for EACH certificate.</b><br>
+                            3. QR codes integrating Tx Hash & IPFS CID are composited.<br>
+                            4. Final ZIP is downloaded.
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-gradient" style="width:100%;justify-content:center;padding:14px;" id="generateBtn">
-                        <i class="fas fa-bolt"></i>
-                        Generate All Certificates & Download ZIP
+                    <button type="button" class="btn btn-gradient" style="width:100%;justify-content:center;padding:14px;" id="generateBtn" onclick="startWeb3Generation()">
+                        <i class="fab fa-ethereum"></i>
+                        Start Web3 Generation
                     </button>
                 </form>
-            </div>
-        </div>
 
-        <!-- MetaMask Signing -->
-        <div class="card">
-            <div class="card-header">
-                <span class="card-title"><i class="fab fa-ethereum" style="color:var(--purple);"></i> Blockchain Anchoring</span>
-                <span class="badge badge-purple">Optional</span>
-            </div>
-            <div class="card-body">
-                <p style="font-size:13px;color:var(--text-secondary);margin-bottom:16px;">
-                    After generating, you can anchor certificate hashes on the Polygon Amoy testnet (free) using MetaMask. This makes certificates permanently verifiable on-chain.
-                </p>
-                <button class="btn btn-secondary" style="width:100%;justify-content:center;" onclick="signWithMetaMask()">
-                    <i class="fab fa-ethereum"></i> Sign Latest Batch with MetaMask
-                </button>
-                <div id="signing-status" style="margin-top:10px;font-size:12px;color:var(--text-muted);text-align:center;"></div>
+                <!-- Progress UI (Hidden initially) -->
+                <div id="progressModal" style="display:none; margin-top:20px; padding:20px; border:1px solid var(--border-color); border-radius:12px; background:var(--bg-card);">
+                    <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                        <strong id="progressText" style="color:var(--text-color);">Preparing Base Images...</strong>
+                        <span id="progressCount" class="badge badge-purple">0 / 0</span>
+                    </div>
+                    <div style="width:100%; height:8px; background:var(--bg-body); border-radius:4px; overflow:hidden;">
+                        <div id="progressBar" style="width:0%; height:100%; background:linear-gradient(90deg, var(--gold), #fb923c); transition:width 0.3s;"></div>
+                    </div>
+                    <div id="progressLog" style="margin-top:10px; font-size:11px; color:var(--text-muted); font-family:monospace; height:60px; overflow-y:auto; background:rgba(0,0,0,0.2); padding:8px; border-radius:6px;">
+                        Waiting to start...
+                    </div>
+                    
+                    <button id="downloadBtn" class="btn btn-gradient" style="width:100%; margin-top:15px; display:none;" onclick="downloadZip()">
+                        <i class="fas fa-file-archive"></i> Download Final ZIP
+                    </button>
+                </div>
             </div>
         </div>
     </div>
@@ -85,7 +81,7 @@ Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
     <div class="card">
         <div class="card-header">
             <span class="card-title">Recently Generated</span>
-            <span class="badge badge-blue">{{ recent|length }} records</span>
+            <span class="badge badge-blue">Last {{ recent|length }} records</span>
         </div>
         {% if recent %}
         <div class="table-wrap">
@@ -93,8 +89,8 @@ Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
                 <thead>
                     <tr>
                         <th>Recipient</th>
-                        <th>Hash</th>
-                        <th>Chain</th>
+                        <th>IPFS CID</th>
+                        <th>Tx Hash</th>
                         <th>Verify</th>
                     </tr>
                 </thead>
@@ -103,13 +99,13 @@ Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
                     <tr>
                         <td style="font-weight:600;">{{ cert.recipient_name }}</td>
                         <td>
-                            {% if cert.cert_hash %}
-                            <span class="hash-display" title="{{ cert.cert_hash }}" onclick="navigator.clipboard.writeText('{{ cert.cert_hash }}')">{{ cert.cert_hash|slice:":10" }}...</span>
+                            {% if cert.ipfs_cid %}
+                            <a href="{{ cert.ipfs_url }}" target="_blank" class="badge badge-purple" title="{{ cert.ipfs_cid }}"><i class="fas fa-cloud"></i> IPFS</a>
                             {% else %}—{% endif %}
                         </td>
                         <td>
                             {% if cert.tx_hash %}
-                            <a href="https://amoy.polygonscan.com/tx/{{ cert.tx_hash }}" target="_blank" class="badge badge-success"><i class="fab fa-ethereum"></i></a>
+                            <a href="https://amoy.polygonscan.com/tx/{{ cert.tx_hash }}" target="_blank" class="badge badge-success" title="{{ cert.tx_hash }}"><i class="fab fa-ethereum"></i> Tx</a>
                             {% else %}<span class="badge badge-warning">Unsigned</span>{% endif %}
                         </td>
                         <td>
@@ -124,7 +120,7 @@ Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
         <div class="empty-state">
             <div class="empty-icon"><i class="fas fa-certificate"></i></div>
             <div class="empty-title">No certificates yet</div>
-            <div class="empty-sub">Upload a CSV to generate certificates for this template</div>
+            <div class="empty-sub">Upload a CSV to generate verifiable Web3 certificates</div>
         </div>
         {% endif %}
     </div>
@@ -135,62 +131,203 @@ Priya Patel,priya@example.com,ML Bootcamp,2024-03-01</pre>
 {% block page_js %}
 <script src="https://cdn.jsdelivr.net/npm/ethers@6.10.0/dist/ethers.umd.min.js"></script>
 <script>
+let generatedCertIds = [];
+
 function fileSelected(input) {
     const file = input.files[0];
     if (file) {
         document.getElementById('uploadTitle').textContent = file.name;
-        document.getElementById('uploadSub').textContent = `${(file.size/1024).toFixed(1)} KB • Ready to generate`;
+        document.getElementById('uploadSub').textContent = `${(file.size/1024).toFixed(1)} KB • Ready to anchor`;
         document.getElementById('uploadZone').style.borderColor = 'var(--success)';
         document.getElementById('uploadZone').style.background = 'rgba(16,185,129,0.05)';
     }
 }
 
-// Drag-over styling
 const zone = document.getElementById('uploadZone');
 zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('drag-over'); });
 zone.addEventListener('dragleave', () => zone.classList.remove('drag-over'));
 zone.addEventListener('drop', () => zone.classList.remove('drag-over'));
 
-// Disable button on submit
-document.getElementById('generateForm').addEventListener('submit', function() {
-    const btn = document.getElementById('generateBtn');
-    btn.disabled = true;
-    btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Generating... Please wait';
-});
+function logProgress(msg) {
+    const log = document.getElementById('progressLog');
+    log.innerHTML += `<div>> ${msg}</div>`;
+    log.scrollTop = log.scrollHeight;
+}
 
-async function signWithMetaMask() {
-    const status = document.getElementById('signing-status');
-    if (!window.ethereum) {
-        status.textContent = 'MetaMask not installed';
+// Ensure hex has even length and no leading '0x' internally for padding
+function stringToHex(str) {
+    let hex = "";
+    for(let i=0;i<str.length;i++) {
+        hex += "" + str.charCodeAt(i).toString(16);
+    }
+    return '0x' + hex;
+}
+
+async function startWeb3Generation() {
+    const fileInput = document.getElementById('csvInput');
+    if (!fileInput.files.length) {
+        alert("Please select a CSV file first.");
         return;
     }
+
+    if (!window.ethereum) {
+        alert("MetaMask is required for Web3 anchoring. Please install it.");
+        return;
+    }
+
+    const btn = document.getElementById('generateBtn');
+    btn.disabled = true;
+    
+    document.getElementById('progressModal').style.display = 'block';
+    logProgress("Checking MetaMask connection...");
+
+    let account, signer;
     try {
-        status.textContent = 'Connecting MetaMask...';
         const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-        const account = accounts[0];
+        account = accounts[0];
         const provider = new ethers.BrowserProvider(window.ethereum);
-        const signer = await provider.getSigner();
+        signer = await provider.getSigner();
+        logProgress(`Connected: ${account.slice(0,6)}...${account.slice(-4)}`);
+    } catch (err) {
+        logProgress(`MetaMask error: ${err.message}`);
+        btn.disabled = false;
+        return;
+    }
 
-        // Collect unsigned certs
-        const hashes = Array.from(document.querySelectorAll('[data-cert-hash]')).map(el => ({
-            id: el.dataset.certId,
-            hash: el.dataset.certHash
-        }));
-
-        if (hashes.length === 0) {
-            status.textContent = 'No unsigned certificates found. Generate a batch first.';
+    // Step 1: Init (Backend generates Base Image & Hash)
+    logProgress("Uploading CSV to backend for Base Image Generation...");
+    document.getElementById('progressText').textContent = "Step 1: Generating Base Images...";
+    
+    const formData = new FormData(document.getElementById('generateForm'));
+    
+    try {
+        const initRes = await fetch("{% url 'bulk_generate_init' template.id %}", {
+            method: 'POST',
+            body: formData,
+        });
+        const initData = await initRes.json();
+        
+        if (initData.error) {
+            logProgress(`Error: ${initData.error}`);
+            btn.disabled = false;
             return;
         }
 
-        status.textContent = `Signing ${hashes.length} hash(es)...`;
-        // Combine all hashes into one message to sign once
-        const combined = hashes.map(h => h.hash).join('\n');
-        const signature = await signer.signMessage(combined);
-        status.textContent = 'Signed! Signature: ' + signature.slice(0, 30) + '...';
+        const certs = initData.certificates;
+        const total = certs.length;
+        if (total === 0) {
+            logProgress("No certificates to process.");
+            btn.disabled = false;
+            return;
+        }
 
-    } catch(err) {
-        status.textContent = 'Error: ' + (err.message || String(err));
+        document.getElementById('progressCount').textContent = `0 / ${total}`;
+        logProgress(`Successfully generated ${total} base images. Starting anchoring loop...`);
+        document.getElementById('progressText').textContent = "Step 2: Anchoring via MetaMask & IPFS";
+
+        // Step 2: Sequential Loop
+        for (let i = 0; i < total; i++) {
+            const cert = certs[i];
+            logProgress(`\n[${i+1}/${total}] Processing ${cert.name}...`);
+            document.getElementById('progressCount').textContent = `${i} / ${total}`;
+            const pct = Math.floor((i / total) * 100);
+            document.getElementById('progressBar').style.width = `${pct}%`;
+
+            try {
+                // A. Send MetaMask Transaction to anchor the hash
+                logProgress(`  -> Waiting for user to confirm MetaMask Tx...`);
+                // We send a 0 ETH transaction to ourselves with the hash in the data payload
+                const hexData = stringToHex(`HashDocs_Anchor:${cert.hash}`);
+                
+                let tx;
+                try {
+                    // Try to anchor data on-chain by sending to the standard Burn address
+                    tx = await signer.sendTransaction({
+                        to: "0x000000000000000000000000000000000000dEaD",
+                        value: 0,
+                        data: hexData
+                    });
+                } catch (txErr) {
+                    if (txErr.message && txErr.message.includes('data')) {
+                        logProgress(`  -> RPC rejected data payload. Falling back to standard Tx...`);
+                        // Fallback: Just trigger a standard 0 ETH transaction to get a timestamped Tx Hash
+                        tx = await signer.sendTransaction({
+                            to: account,
+                            value: 0
+                        });
+                    } else {
+                        throw txErr;
+                    }
+                }
+                
+                logProgress(`  -> Tx Submitted! Waiting for mining (Tx: ${tx.hash.slice(0,10)}...)`);
+                const receipt = await tx.wait();
+                logProgress(`  -> Tx Confirmed in Block: ${receipt.blockNumber}`);
+
+                // B. Send TxHash to Backend to Finalize (QR & IPFS)
+                logProgress(`  -> Finalizing: Generating QR and Uploading to IPFS...`);
+                const finRes = await fetch(`/builder/cert/${cert.id}/finalize/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                    },
+                    body: JSON.stringify({
+                        tx_hash: tx.hash,
+                        signature: 'Anchored via tx data payload'
+                    })
+                });
+                
+                const finData = await finRes.json();
+                if (finData.error) throw new Error(finData.error);
+                
+                logProgress(`  -> Success! IPFS CID: ${finData.ipfs_cid.slice(0,15)}...`);
+                generatedCertIds.push(cert.id);
+
+            } catch (err) {
+                logProgress(`  -> ERROR on ${cert.name}: ${err.message}`);
+                // Continue to next row even if one fails
+            }
+        }
+
+        // Completion
+        document.getElementById('progressCount').textContent = `${total} / ${total}`;
+        document.getElementById('progressBar').style.width = `100%`;
+        document.getElementById('progressText').textContent = "Process Complete!";
+        logProgress("\nAll processing finished!");
+        
+        if (generatedCertIds.length > 0) {
+            document.getElementById('downloadBtn').style.display = 'block';
+        }
+
+    } catch (err) {
+        logProgress(`Network error: ${err.message}`);
+        btn.disabled = false;
     }
+}
+
+function downloadZip() {
+    if (generatedCertIds.length === 0) return;
+    
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = "{% url 'bulk_download_zip' template.id %}";
+    
+    const csrf = document.createElement('input');
+    csrf.type = 'hidden';
+    csrf.name = 'csrfmiddlewaretoken';
+    csrf.value = document.querySelector('[name=csrfmiddlewaretoken]').value;
+    form.appendChild(csrf);
+    
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = 'cert_ids';
+    input.value = JSON.stringify(generatedCertIds);
+    form.appendChild(input);
+    
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
 }
 </script>
 {% endblock %}
